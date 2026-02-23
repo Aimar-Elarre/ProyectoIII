@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "InventoryTypes.h"
 #include "InventoryWidget.generated.h"
 
 class UUniformGridPanel;
@@ -10,14 +9,15 @@ class UTextBlock;
 class UInventoryComponent;
 
 UCLASS()
-class YOURGAME_API UInventoryWidget : public UUserWidget
+class DUNGEONCRAWLER_API UInventoryWidget : public UUserWidget
 {
     GENERATED_BODY()
 
 public:
+    UFUNCTION(BlueprintCallable)
     void Init(UInventoryComponent* InInventory);
 
-    UFUNCTION()
+    UFUNCTION(BlueprintCallable)
     void Refresh();
 
 protected:
@@ -26,9 +26,6 @@ protected:
 
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UTextBlock> WeightText;
-
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<UUserWidget> SlotWidgetClass;
 
 private:
     UPROPERTY()

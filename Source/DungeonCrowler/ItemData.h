@@ -2,31 +2,28 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Engine/Texture2D.h"
 #include "ItemData.generated.h"
 
 UCLASS(BlueprintType)
-class YOURGAME_API UItemData : public UDataAsset
+class DUNGEONCRAWLER_API UItemData : public UDataAsset
 {
     GENERATED_BODY()
 
 public:
-    // ID único del objeto (Potion, Key, Ammo...)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
     FName ItemId;
 
-    // Nombre que se muestra en el inventario
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
     FText DisplayName;
 
-    // Imagen del objeto
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    UTexture2D* Icon = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<UTexture2D> Icon = nullptr;
 
-    // Peso de UNA unidad
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
     float WeightPerUnit = 1.0f;
 
-    // Máximo que se puede acumular
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
     int32 MaxStackSize = 99;
 };

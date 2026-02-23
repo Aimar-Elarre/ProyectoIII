@@ -1,28 +1,36 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "UInventoryComponent.generated.h"
+#include "InventoryTypes.h"
+#include "InventoryComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class DUNGEONCROWLER_API UUInventoryComponent : public UActorComponent
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+class DUNGEONCRAWLER_API UInventoryComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	UUInventoryComponent();
+public:
+    UInventoryComponent();
 
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+    float MaxWeight = 50.0f;
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    UPROPERTY(BlueprintAssignable)
+    FOnInventoryChanged OnInventoryChanged;
 
-		
+    UFUNCTION(BlueprintCallable)
+    bool AddItem(UItemData* ItemData, int32 Quantity);
+
+    UFUNCTION(BlueprintCallable)
+    float GetCurrentWeight() const;
+
+    UFUNCTION(BlueprintCallable)
+    void GetEntries(TArray<FInventoryEntry>& OutEntries) const;
+
+private:
+    UPROPERTY()
+    TMap<FName, FInventoryEntry> Items;
 };

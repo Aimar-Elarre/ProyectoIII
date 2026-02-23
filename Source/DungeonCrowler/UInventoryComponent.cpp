@@ -1,34 +1,54 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿#include "InventoryComponent.h"
 
-
-#include "UInventoryComponent.h"
-
-// Sets default values for this component's properties
-UUInventoryComponent::UUInventoryComponent()
+UInventoryComponent::UInventoryComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
+    PrimaryComponentTick.bCanEverTick = false;
 }
 
-
-// Called when the game starts
-void UUInventoryComponent::BeginPlay()
+float UInventoryComponent::GetCurrentWeight() const
 {
-	Super::BeginPlay();
+    float Total = 0.f;
 
-	// ...
-	
+    for (const auto& Pair : Items)
+    {
+        const FInventoryEntry& Entry = Pair.Value;
+
+        if (Entry.ItemData)
+        {
+            Total += Entry.Quantity * Entry.ItemData->WeightPerUnit;
+        }
+    }
+
+    return Total;
 }
 
-
-// Called every frame
-void UUInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+bool UInventoryComponent::AddItem(UItemData* ItemData, int32 Quantity)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    if (!ItemData || Quantity <= 0)
+        return false;
 
-	// ...
+    float NewWeight = GetCurrentWeight() + Quantity * ItemData->WeightPerUnit;
+
+    if (NewWeight > MaxWeight)
+        return false;
+
+    FInventoryEntry* Found = Items.Find(ItemData->ItemId);
+
+    if (Found)
+    {
+        Found->Quantity += Quantity;
+    }
+    else
+    {
+        Items.Add(ItemData->ItemId, FInventoryEntry(ItemData, Quantity));
+    }
+
+    OnInventoryChanged.Broadcast();
+    return true;
 }
 
+void UInventoryComponent::GetEntries(TArray<FInventoryEntry>& OutEntries) const
+{
+    OutEntries.Reset();
+    Items.GenerateValueArray(OutEntries);
+}

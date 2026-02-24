@@ -1,4 +1,5 @@
 ﻿#include "MyPlayerCharacter.h"
+#include "TimerManager.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -48,6 +49,7 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &AMyPlayerCharacter::StopJump);
     PlayerInputComponent->BindAxis("Turn", this, &AMyPlayerCharacter::Turn);
     PlayerInputComponent->BindAxis("LookUp", this, &AMyPlayerCharacter::LookUp);
+    PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
 }
 
 void AMyPlayerCharacter::MoveForward(float Value)
@@ -97,5 +99,25 @@ void AMyPlayerCharacter::Turn(float Value)
 void AMyPlayerCharacter::LookUp(float Value)
 {
     AddControllerPitchInput(Value);
+}
+
+void AMyPlayerCharacter::Dash()
+{
+    if (!bCanDash) return;
+
+    bCanDash = false;
+
+    FVector ForwardDirection = GetActorForwardVector();
+    LaunchCharacter(ForwardDirection * DashStrength, true, true);
+
+    GetWorldTimerManager().SetTimer(
+        DashCooldownHandle,
+        [this]()
+        {
+            bCanDash = true;
+        },
+        DashCooldown,
+        false
+    );
 }
 

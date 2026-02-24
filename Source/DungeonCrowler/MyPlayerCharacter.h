@@ -29,6 +29,9 @@ public:
     void StopJump();
     void Turn(float Value);
     void LookUp(float Value);
+    void Dash();
+
+
 
     // VIDA
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
@@ -36,6 +39,16 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
     float CurrentHealth;
+
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashStrength = 1200.f;
+
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashCooldown = 1.0f;
+
+    bool bCanDash = true;
+
+    FTimerHandle DashCooldownHandle;
 
     UPROPERTY(VisibleAnywhere)
     USpringArmComponent* SpringArm;

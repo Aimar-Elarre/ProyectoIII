@@ -39,11 +39,18 @@ public:
     void StopSlide();
     void Die();
     void KillPlayer();
+    void SetLastCheckpoint(FVector NewLocation);
+    void RespawnAtCheckpoint();
     // SLIDE
     bool bIsSliding = false;
+    FTimerHandle RespawnTimerHandle;
+    bool bHasCheckpoint = false;
     float OriginalGroundFriction;
     float MinSlideSpeed = 350.f;
     bool bIsDead = false;
+    FVector LastCheckpointLocation;
+
+
 
     UPROPERTY(EditAnywhere, Category = "Slide")
     float SlideImpulse = 1200.f;

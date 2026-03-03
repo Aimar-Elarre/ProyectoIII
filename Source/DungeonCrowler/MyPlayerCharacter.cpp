@@ -1,12 +1,14 @@
 ﻿#include "MyPlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "TimerManager.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
     GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+    GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 
     // Cámara FPS
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
@@ -150,22 +152,33 @@ void AMyPlayerCharacter::StopJump()
 }
 void AMyPlayerCharacter::Die()
 {
+    if (bIsDead) return;
+
     bIsDead = true;
 
     UE_LOG(LogTemp, Warning, TEXT("Personaje muerto"));
 
-    // Desactivar movimiento
     GetCharacterMovement()->DisableMovement();
 
-    if (AController* LocalController = GetController())
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
-        DisableInput(Cast<APlayerController>(LocalController));
+        DisableInput(PC);
     }
+
     GEngine->AddOnScreenDebugMessage(
         -1,
-        3.f,
+        2.f,
         FColor::Red,
         TEXT("ESTAS MUERTO")
+    );
+
+    // Esperar 2 segundos y respawnear
+    GetWorldTimerManager().SetTimer(
+        RespawnTimerHandle,
+        this,
+        &AMyPlayerCharacter::RespawnAtCheckpoint,
+        2.0f,
+        false
     );
 }
 
@@ -177,7 +190,42 @@ void AMyPlayerCharacter::KillPlayer()
     Die();
 }
 
+void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
+{
+    LastCheckpointLocation = NewLocation;
 
+    UE_LOG(LogTemp, Warning, TEXT("Checkpoint guardado"));
+}
+
+void AMyPlayerCharacter::RespawnAtCheckpoint()
+{
+    if (!bHasCheckpoint)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            3.f,
+            FColor::Yellow,
+            TEXT("NO HAY CHECKPOINT GUARDADO")
+        );
+
+        // Si no hay checkpoint, respawn en posición inicial
+        SetActorLocation(GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation());
+    }
+    else
+    {
+        SetActorLocation(LastCheckpointLocation);
+    }
+
+    CurrentHealth = MaxHealth;
+    bIsDead = false;
+
+    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        EnableInput(PC);
+    }
+}
 void AMyPlayerCharacter::StartSlide()
 {
     if (bIsSliding) return;
@@ -269,12 +317,10 @@ void AMyPlayerCharacter::Dash()
     LaunchCharacter(DashDir * DashStrength, true, false);
 
     GetWorldTimerManager().SetTimer(
-        DashCooldownHandle,
-        [this]()
-        {
-            bCanDash = true;
-        },
-        DashCooldown,
+        SlideTimerHandle,
+        this,
+        &AMyPlayerCharacter::RespawnAtCheckpoint,
+        2.0f,
         false
     );
 }

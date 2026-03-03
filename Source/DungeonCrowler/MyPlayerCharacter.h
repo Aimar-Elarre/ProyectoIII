@@ -33,7 +33,28 @@ public:
     void StopJump();
     void Turn(float Value);
     void LookUp(float Value);
+    void StartCrouch();
+    void StopCrouch();
+	void StartSlide();
+    void StopSlide();
+    void Die();
+    void KillPlayer();
+    // SLIDE
+    bool bIsSliding = false;
+    float OriginalGroundFriction;
+    float MinSlideSpeed = 350.f;
+    bool bIsDead = false;
 
+    UPROPERTY(EditAnywhere, Category = "Slide")
+    float SlideImpulse = 1200.f;
+
+    UPROPERTY(EditAnywhere, Category = "Slide")
+    float SlideFriction = 0.5f;
+
+    UPROPERTY(EditAnywhere, Category = "Slide")
+    float SlideDuration = 0.75f;
+
+    FTimerHandle SlideTimerHandle;
     // DASH
     void Dash();
 
@@ -44,6 +65,17 @@ public:
     float DashCooldown = 1.f;
 
     bool bCanDash = true;
+    // CROUCH SUAVE
+    bool bIsCrouching = false;
+
+    UPROPERTY(EditAnywhere, Category = "Crouch")
+    float CrouchHeight = 44.f;
+
+    UPROPERTY(EditAnywhere, Category = "Crouch")
+    float StandingHeight = 88.f;
+
+    UPROPERTY(EditAnywhere, Category = "Crouch")
+    float CrouchSpeed = 8.f;
     FTimerHandle DashCooldownHandle;
 
     // VELOCIDADES

@@ -1,10 +1,12 @@
 ﻿#include "MyPlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "TimerManager.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
+    GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
     // Cámara FPS
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
@@ -73,6 +75,19 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     {
         PlayerHUD->UpdateStamina(GetStaminaPercent());
     }
+
+    float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
+
+    float CurrentHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+
+    float NewHeight = FMath::FInterpTo(
+        CurrentHeight,
+        TargetHeight,
+        DeltaTime,
+        CrouchSpeed
+    );
+
+    GetCapsuleComponent()->SetCapsuleHalfHeight(NewHeight, true);
 }
 
 void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -89,6 +104,9 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
     PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AMyPlayerCharacter::StartRun);
     PlayerInputComponent->BindAction("Run", IE_Released, this, &AMyPlayerCharacter::StopRun);
+    PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AMyPlayerCharacter::StartCrouch);
+    PlayerInputComponent->BindAction("Crouch", IE_Released, this, &AMyPlayerCharacter::StopCrouch);
+    PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
 }
 
 void AMyPlayerCharacter::MoveForward(float Value)
@@ -108,16 +126,18 @@ void AMyPlayerCharacter::MoveRight(float Value)
 
 void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 {
+    if (bIsDead) return;
+
     CurrentHealth -= DamageAmount;
+    CurrentHealth = FMath::Clamp(CurrentHealth, 0.f, MaxHealth);
 
     if (CurrentHealth <= 0.f)
     {
-        CurrentHealth = 0.f;
-        UE_LOG(LogTemp, Warning, TEXT("Personaje muerto"));
+        Die();
     }
-
-
 }
+
+
 
 void AMyPlayerCharacter::StartJump()
 {
@@ -128,7 +148,65 @@ void AMyPlayerCharacter::StopJump()
 {
     StopJumping();
 }
+void AMyPlayerCharacter::Die()
+{
+    bIsDead = true;
 
+    UE_LOG(LogTemp, Warning, TEXT("Personaje muerto"));
+
+    // Desactivar movimiento
+    GetCharacterMovement()->DisableMovement();
+
+    if (AController* LocalController = GetController())
+    {
+        DisableInput(Cast<APlayerController>(LocalController));
+    }
+    GEngine->AddOnScreenDebugMessage(
+        -1,
+        3.f,
+        FColor::Red,
+        TEXT("ESTAS MUERTO")
+    );
+}
+
+void AMyPlayerCharacter::KillPlayer()
+{
+    if (bIsDead) return;
+
+    CurrentHealth = 0.f;
+    Die();
+}
+
+
+void AMyPlayerCharacter::StartSlide()
+{
+    if (bIsSliding) return;
+
+    bIsSliding = true;
+
+    OriginalGroundFriction = GetCharacterMovement()->GroundFriction;
+    GetCharacterMovement()->GroundFriction = 0.05f;
+
+    FVector SlideVelocity = GetVelocity();
+    SlideVelocity.Z = 0.f;
+
+    LaunchCharacter(SlideVelocity * 1.2f, true, false);
+
+    GetWorldTimerManager().SetTimer(
+        SlideTimerHandle,
+        this,
+        &AMyPlayerCharacter::StopSlide,
+        1.0f,
+        false
+    );
+}
+void AMyPlayerCharacter::StopSlide()
+{
+    bIsSliding = false;
+    bIsCrouching = true;
+
+    GetCharacterMovement()->GroundFriction = OriginalGroundFriction;
+}
 void AMyPlayerCharacter::Turn(float Value)
 {
     AddControllerYawInput(Value);
@@ -141,12 +219,15 @@ void AMyPlayerCharacter::LookUp(float Value)
 
 void AMyPlayerCharacter::StartRun()
 {
-    if (CurrentStamina > 0.f)
-    {
-        bIsRunning = true;
-        GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
-    }
+    if (bIsSliding) return;
+    if (bIsCrouching) return;          // 🚫 No sprint si está agachado
+    if (CurrentStamina <= 0.f) return;
+
+    bIsRunning = true;
+    GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 }
+
+
 
 void AMyPlayerCharacter::StopRun()
 {
@@ -156,6 +237,23 @@ void AMyPlayerCharacter::StopRun()
 float AMyPlayerCharacter::GetStaminaPercent() const
 {
     return CurrentStamina / MaxStamina;
+}
+void AMyPlayerCharacter::StartCrouch()
+{
+    FVector HorizontalVelocity = GetVelocity();
+    HorizontalVelocity.Z = 0.f;
+
+    if (HorizontalVelocity.Size() > MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
+    {
+        StartSlide();
+        return;
+    }
+
+    bIsCrouching = true;
+}
+void AMyPlayerCharacter::StopCrouch()
+{
+    bIsCrouching = false;
 }
 void AMyPlayerCharacter::Dash()
 {

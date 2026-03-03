@@ -76,7 +76,6 @@ void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
         UE_LOG(LogTemp, Warning, TEXT("Personaje muerto"));
     }
 
-
 }
 
 void AMyPlayerCharacter::StartJump()

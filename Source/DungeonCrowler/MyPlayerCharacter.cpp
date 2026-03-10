@@ -2,7 +2,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Perception/AISense_Hearing.h"
 #include "TimerManager.h"
+
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -115,9 +117,12 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 void AMyPlayerCharacter::MoveForward(float Value)
 {
     if (Value != 0.0f)
+    {
         AddMovementInput(GetActorForwardVector(), Value);
-}
 
+        MakeMovementNoise(0.4f);
+    }
+}
 
 void AMyPlayerCharacter::MoveRight(float Value)
 {
@@ -125,6 +130,17 @@ void AMyPlayerCharacter::MoveRight(float Value)
     {
         AddMovementInput(GetActorRightVector(), Value);
     }
+}
+
+
+void AMyPlayerCharacter::MakeMovementNoise(float Loudness)
+{
+    UAISense_Hearing::ReportNoiseEvent(
+        GetWorld(),
+        GetActorLocation(),
+        Loudness,
+        this
+    );
 }
 
 void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
@@ -144,8 +160,8 @@ void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 void AMyPlayerCharacter::StartJump()
 {
     Jump();
+    MakeMovementNoise(1.0f);
 }
-
 void AMyPlayerCharacter::StopJump()
 {
     StopJumping();
@@ -314,22 +330,18 @@ void AMyPlayerCharacter::UpdateMovementSpeed()
 
     GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
 
-    // Afectar también al salto
-    float FinalJump = JumpStrength * Multiplier;
-    GetCharacterMovement()->JumpZVelocity = FinalJump;
+    // DEBUG LOG
+    UE_LOG(LogTemp, Warning, TEXT("Items: %d | Running: %d | Multiplier: %f | Speed: %f"),
+        ItemsCarried, bIsRunning, Multiplier, FinalSpeed);
 
-    // DEBUG
-    UE_LOG(LogTemp, Warning, TEXT("Items:%d | Multiplier:%f | Speed:%f | Jump:%f"),
-        ItemsCarried, Multiplier, FinalSpeed, FinalJump);
-
+    // DEBUG EN PANTALLA
     if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(
             -1,
             2.f,
             FColor::Green,
-            FString::Printf(TEXT("Items:%d | Speed:%.0f | Jump:%.0f"),
-                ItemsCarried, FinalSpeed, FinalJump)
+            FString::Printf(TEXT("Items:%d | Speed: %.0f"), ItemsCarried, FinalSpeed)
         );
     }
 }
@@ -346,12 +358,18 @@ void AMyPlayerCharacter::Dash()
 
     LaunchCharacter(DashDir * DashStrength, true, false);
 
+    // volver a activar dash después del cooldown
     GetWorldTimerManager().SetTimer(
-        SlideTimerHandle,
+        DashCooldownHandle,
         this,
-        &AMyPlayerCharacter::RespawnAtCheckpoint,
-        2.0f,
+        &AMyPlayerCharacter::ResetDash,
+        DashCooldown,
         false
     );
+}
+
+void AMyPlayerCharacter::ResetDash()
+{
+    bCanDash = true;
 }
 

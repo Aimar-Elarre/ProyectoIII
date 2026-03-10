@@ -41,6 +41,7 @@ public:
     void KillPlayer();
     void SetLastCheckpoint(FVector NewLocation);
     void RespawnAtCheckpoint();
+    void ResetDash();
     // SLIDE
     bool bIsSliding = false;
     FTimerHandle RespawnTimerHandle;
@@ -136,6 +137,7 @@ public:
     float CurrentHealth;
 
     void TakeDamageCustom(float DamageAmount);
+    void MakeMovementNoise(float Loudness);
 
     UPROPERTY(VisibleAnywhere)
     USpringArmComponent* SpringArm;

@@ -8,7 +8,6 @@
 #include "MyPlayerHUD.h"
 #include "MyPlayerCharacter.generated.h"
 
-
 UCLASS()
 class DUNGEONCROWLER_API AMyPlayerCharacter : public ACharacter
 {
@@ -35,22 +34,27 @@ public:
     void LookUp(float Value);
     void StartCrouch();
     void StopCrouch();
-	void StartSlide();
+    void StartSlide();
     void StopSlide();
+
+    // VIDA / RESPAWN
     void Die();
     void KillPlayer();
     void SetLastCheckpoint(FVector NewLocation);
     void RespawnAtCheckpoint();
+    void TakeDamageCustom(float DamageAmount);
+
+    // DROP ITEM
+    void DropItem();
+
     // SLIDE
     bool bIsSliding = false;
     FTimerHandle RespawnTimerHandle;
     bool bHasCheckpoint = false;
-    float OriginalGroundFriction;
+    float OriginalGroundFriction = 0.f;
     float MinSlideSpeed = 350.f;
     bool bIsDead = false;
-    FVector LastCheckpointLocation;
-
-
+    FVector LastCheckpointLocation = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, Category = "Slide")
     float SlideImpulse = 1200.f;
@@ -62,6 +66,7 @@ public:
     float SlideDuration = 0.75f;
 
     FTimerHandle SlideTimerHandle;
+
     // DASH
     void Dash();
 
@@ -72,6 +77,8 @@ public:
     float DashCooldown = 1.f;
 
     bool bCanDash = true;
+    FTimerHandle DashCooldownHandle;
+
     // CROUCH SUAVE
     bool bIsCrouching = false;
 
@@ -83,7 +90,6 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "Crouch")
     float CrouchSpeed = 8.f;
-    FTimerHandle DashCooldownHandle;
 
     // VELOCIDADES
     UPROPERTY(EditAnywhere, Category = "Movement")
@@ -99,7 +105,7 @@ public:
     float MaxStamina = 100.f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
-    float CurrentStamina;
+    float CurrentStamina = 0.f;
 
     UPROPERTY(EditAnywhere, Category = "Stamina")
     float StaminaDrainRate = 30.f;
@@ -111,21 +117,22 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float MaxHealth = 100.f;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+    float CurrentHealth = 0.f;
+
+    // UI
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> PlayerHUDClass;
 
-    UMyPlayerHUD* PlayerHUD;
+    UPROPERTY()
+    UMyPlayerHUD* PlayerHUD = nullptr;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-    float CurrentHealth;
-
-    void TakeDamageCustom(float DamageAmount);
+    // CÁMARA
+    UPROPERTY(VisibleAnywhere)
+    USpringArmComponent* SpringArm = nullptr;
 
     UPROPERTY(VisibleAnywhere)
-    USpringArmComponent* SpringArm;
-
-    UPROPERTY(VisibleAnywhere)
-    UCameraComponent* Camera;
+    UCameraComponent* Camera = nullptr;
 
     UFUNCTION(BlueprintPure)
     float GetStaminaPercent() const;

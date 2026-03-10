@@ -30,6 +30,7 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 }
 void AMyPlayerCharacter::BeginPlay()
 {
+    UpdateMovementSpeed();
     Super::BeginPlay();
 
     CurrentHealth = MaxHealth;
@@ -140,7 +141,7 @@ void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 }
 
 
-}
+
 
 void AMyPlayerCharacter::StartJump()
 {
@@ -269,19 +270,19 @@ void AMyPlayerCharacter::LookUp(float Value)
 void AMyPlayerCharacter::StartRun()
 {
     if (bIsSliding) return;
-    if (bIsCrouching) return;          // 🚫 No sprint si está agachado
+    if (bIsCrouching) return;
     if (CurrentStamina <= 0.f) return;
 
     bIsRunning = true;
-    GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
+
+    UpdateMovementSpeed();
 }
-
-
 
 void AMyPlayerCharacter::StopRun()
 {
     bIsRunning = false;
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+
+    UpdateMovementSpeed();
 }
 float AMyPlayerCharacter::GetStaminaPercent() const
 {
@@ -303,6 +304,32 @@ void AMyPlayerCharacter::StartCrouch()
 void AMyPlayerCharacter::StopCrouch()
 {
     bIsCrouching = false;
+}
+
+void AMyPlayerCharacter::UpdateMovementSpeed()
+{
+    float Multiplier = 1.0f - (ItemsCarried * SpeedPenaltyPerItem);
+    Multiplier = FMath::Clamp(Multiplier, MinSpeedMultiplier, 1.0f);
+
+    float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+    float FinalSpeed = BaseSpeed * Multiplier;
+
+    GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
+
+    // DEBUG LOG
+    UE_LOG(LogTemp, Warning, TEXT("Items: %d | Running: %d | Multiplier: %f | Speed: %f"),
+        ItemsCarried, bIsRunning, Multiplier, FinalSpeed);
+
+    // DEBUG EN PANTALLA
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            2.f,
+            FColor::Green,
+            FString::Printf(TEXT("Items:%d | Speed: %.0f"), ItemsCarried, FinalSpeed)
+        );
+    }
 }
 void AMyPlayerCharacter::Dash()
 {

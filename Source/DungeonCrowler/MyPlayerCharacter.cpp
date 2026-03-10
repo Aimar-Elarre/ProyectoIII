@@ -141,8 +141,6 @@ void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 }
 
 
-
-
 void AMyPlayerCharacter::StartJump()
 {
     Jump();

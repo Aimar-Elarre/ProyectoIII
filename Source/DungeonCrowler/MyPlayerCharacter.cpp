@@ -314,18 +314,22 @@ void AMyPlayerCharacter::UpdateMovementSpeed()
 
     GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
 
-    // DEBUG LOG
-    UE_LOG(LogTemp, Warning, TEXT("Items: %d | Running: %d | Multiplier: %f | Speed: %f"),
-        ItemsCarried, bIsRunning, Multiplier, FinalSpeed);
+    // Afectar también al salto
+    float FinalJump = JumpStrength * Multiplier;
+    GetCharacterMovement()->JumpZVelocity = FinalJump;
 
-    // DEBUG EN PANTALLA
+    // DEBUG
+    UE_LOG(LogTemp, Warning, TEXT("Items:%d | Multiplier:%f | Speed:%f | Jump:%f"),
+        ItemsCarried, Multiplier, FinalSpeed, FinalJump);
+
     if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(
             -1,
             2.f,
             FColor::Green,
-            FString::Printf(TEXT("Items:%d | Speed: %.0f"), ItemsCarried, FinalSpeed)
+            FString::Printf(TEXT("Items:%d | Speed:%.0f | Jump:%.0f"),
+                ItemsCarried, FinalSpeed, FinalJump)
         );
     }
 }

@@ -92,6 +92,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Movement")
     float RunSpeed = 1000.f;
 
+    UPROPERTY(EditAnywhere, Category = "Movement")
+    float JumpStrength = 600.f;
+
     bool bIsRunning = false;
 
     // STAMINA

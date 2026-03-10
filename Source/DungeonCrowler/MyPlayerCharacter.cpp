@@ -34,6 +34,7 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
 void AMyPlayerCharacter::BeginPlay()
 {
+    UpdateMovementSpeed();
     Super::BeginPlay();
 
     CurrentHealth = MaxHealth;
@@ -150,6 +151,7 @@ void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
         Die();
     }
 }
+
 
 void AMyPlayerCharacter::StartJump()
 {
@@ -293,13 +295,15 @@ void AMyPlayerCharacter::StartRun()
     if (CurrentStamina <= 0.f) return;
 
     bIsRunning = true;
-    GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
+
+    UpdateMovementSpeed();
 }
 
 void AMyPlayerCharacter::StopRun()
 {
     bIsRunning = false;
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+
+    UpdateMovementSpeed();
 }
 
 float AMyPlayerCharacter::GetStaminaPercent() const
@@ -326,6 +330,35 @@ void AMyPlayerCharacter::StopCrouch()
     bIsCrouching = false;
 }
 
+void AMyPlayerCharacter::UpdateMovementSpeed()
+{
+    float Multiplier = 1.0f - (ItemsCarried * SpeedPenaltyPerItem);
+    Multiplier = FMath::Clamp(Multiplier, MinSpeedMultiplier, 1.0f);
+
+    float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+    float FinalSpeed = BaseSpeed * Multiplier;
+
+    GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
+
+    // Afectar también al salto
+    float FinalJump = JumpStrength * Multiplier;
+    GetCharacterMovement()->JumpZVelocity = FinalJump;
+
+    // DEBUG
+    UE_LOG(LogTemp, Warning, TEXT("Items:%d | Multiplier:%f | Speed:%f | Jump:%f"),
+        ItemsCarried, Multiplier, FinalSpeed, FinalJump);
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            2.f,
+            FColor::Green,
+            FString::Printf(TEXT("Items:%d | Speed:%.0f | Jump:%.0f"),
+                ItemsCarried, FinalSpeed, FinalJump)
+        );
+    }
+}
 void AMyPlayerCharacter::Dash()
 {
     if (!bCanDash) return;

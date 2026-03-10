@@ -93,10 +93,13 @@ public:
 
     // VELOCIDADES
     UPROPERTY(EditAnywhere, Category = "Movement")
-    float WalkSpeed = 400.f;
+    float WalkSpeed = 600.f;
 
     UPROPERTY(EditAnywhere, Category = "Movement")
-    float RunSpeed = 800.f;
+    float RunSpeed = 1000.f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+    float JumpStrength = 600.f;
 
     bool bIsRunning = false;
 
@@ -121,13 +124,27 @@ public:
     float CurrentHealth = 0.f;
 
     // UI
+
+    // INVENTARIO / PESO
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+    int ItemsCarried = 4;
+
+    UPROPERTY(EditAnywhere, Category = "Inventory")
+    float SpeedPenaltyPerItem = 0.05f; // 5% menos velocidad por objeto
+
+    UPROPERTY(EditAnywhere, Category = "Inventory")
+    float MinSpeedMultiplier = 0.4f; // nunca bajar de 40%
+
+    void UpdateMovementSpeed();
+
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> PlayerHUDClass;
 
     UPROPERTY()
     UMyPlayerHUD* PlayerHUD = nullptr;
 
-    // C¡MARA
+    // C√ÅMARA
     UPROPERTY(VisibleAnywhere)
     USpringArmComponent* SpringArm = nullptr;
 

@@ -193,34 +193,34 @@ void AMyPlayerCharacter::KillPlayer()
 void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
 {
     LastCheckpointLocation = NewLocation;
+    bHasCheckpoint = true;
 
-    UE_LOG(LogTemp, Warning, TEXT("Checkpoint guardado"));
+    UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO EN: %s"), *LastCheckpointLocation.ToString());
 }
-
 void AMyPlayerCharacter::RespawnAtCheckpoint()
 {
+    UE_LOG(LogTemp, Warning, TEXT("RESPAWN CHECKPOINT FLAG: %d"), bHasCheckpoint);
+
     if (!bHasCheckpoint)
     {
         GEngine->AddOnScreenDebugMessage(
             -1,
             3.f,
-            FColor::Yellow,
+            FColor::Red,
             TEXT("NO HAY CHECKPOINT GUARDADO")
         );
+        return;
+    }
 
-        // Si no hay checkpoint, respawn en posición inicial
-        SetActorLocation(GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation());
-    }
-    else
-    {
-        SetActorLocation(LastCheckpointLocation);
-    }
+    SetActorLocation(LastCheckpointLocation);
 
     CurrentHealth = MaxHealth;
     bIsDead = false;
 
+    // Volver a activar movimiento
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
+    // Volver a activar input
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
         EnableInput(PC);

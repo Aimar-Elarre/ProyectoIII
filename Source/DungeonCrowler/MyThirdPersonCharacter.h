@@ -8,9 +8,9 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
-struct FInputActionValue;
-
 class UUserWidget;
+class USoundBase;
+struct FInputActionValue;
 
 UCLASS()
 class DUNGEONCROWLER_API AMyThirdPersonCharacter : public ACharacter
@@ -34,6 +34,9 @@ protected:
 	void Input_Jump_Completed(const FInputActionValue& Value);
 	void ResetDash();
 
+	// Drop item
+	void Input_Drop(const FInputActionValue& Value);
+
 	// Inventory (TAB)
 	void Input_Inventory_Toggle(const FInputActionValue& Value);
 	void ShowInventory();
@@ -45,6 +48,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<UCameraComponent> FollowCamera;
 
+	// Input
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> IMC_Default;
 
@@ -63,14 +67,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> IA_Dash;
 
-	// ✅ NUEVO: Input Action para inventario (TAB)
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> IA_Inventory;
 
-	// ✅ NUEVO: Widget BP del inventario (WBP_Inventory)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Drop;
+
+	// UI
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> InventoryWidgetClass;
 
+	// Dash settings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
 	bool bCanDash = true;
 
@@ -86,9 +93,8 @@ protected:
 private:
 	FTimerHandle DashCooldownHandle;
 
-	// ✅ NUEVO: instancia y estado del inventario
 	UPROPERTY()
-	TObjectPtr<UUserWidget> InventoryWidgetInstance;
+	TObjectPtr<UUserWidget> InventoryWidgetInstance = nullptr;
 
 	UPROPERTY()
 	bool bInventoryOpen = false;

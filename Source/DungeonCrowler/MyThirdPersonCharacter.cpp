@@ -67,6 +67,7 @@ void AMyThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 	{
 		EIC->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AMyThirdPersonCharacter::Input_Look);
 	}
+
 	if (IA_MouseLook)
 	{
 		EIC->BindAction(IA_MouseLook, ETriggerEvent::Triggered, this, &AMyThirdPersonCharacter::Input_Look);
@@ -83,10 +84,14 @@ void AMyThirdPersonCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		EIC->BindAction(IA_Dash, ETriggerEvent::Started, this, &AMyThirdPersonCharacter::Input_Dash_Started);
 	}
 
-	// ✅ INVENTARIO (TAB)
 	if (IA_Inventory)
 	{
 		EIC->BindAction(IA_Inventory, ETriggerEvent::Started, this, &AMyThirdPersonCharacter::Input_Inventory_Toggle);
+	}
+
+	if (IA_Drop)
+	{
+		EIC->BindAction(IA_Drop, ETriggerEvent::Started, this, &AMyThirdPersonCharacter::Input_Drop);
 	}
 }
 
@@ -139,7 +144,13 @@ void AMyThirdPersonCharacter::Input_Dash_Started(const FInputActionValue& /*Valu
 	}
 
 	GetWorldTimerManager().ClearTimer(DashCooldownHandle);
-	GetWorldTimerManager().SetTimer(DashCooldownHandle, this, &AMyThirdPersonCharacter::ResetDash, DashCooldown, false);
+	GetWorldTimerManager().SetTimer(
+		DashCooldownHandle,
+		this,
+		&AMyThirdPersonCharacter::ResetDash,
+		DashCooldown,
+		false
+	);
 }
 
 void AMyThirdPersonCharacter::ResetDash()
@@ -147,16 +158,21 @@ void AMyThirdPersonCharacter::ResetDash()
 	bCanDash = true;
 }
 
+void AMyThirdPersonCharacter::Input_Drop(const FInputActionValue& /*Value*/)
+{
+	UE_LOG(LogTemp, Warning, TEXT("DROP pressed"));
+}
+
 // =======================
-// ✅ INVENTARIO (TAB)
+// INVENTARIO (TAB)
 // =======================
 
 void AMyThirdPersonCharacter::Input_Inventory_Toggle(const FInputActionValue& /*Value*/)
 {
 	UE_LOG(LogTemp, Warning, TEXT("TAB FUNCIONA"));
+
 	if (bInventoryOpen) HideInventory();
 	else ShowInventory();
-	
 }
 
 void AMyThirdPersonCharacter::ShowInventory()
@@ -164,7 +180,6 @@ void AMyThirdPersonCharacter::ShowInventory()
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (!PC) return;
 
-	// Crear widget si no existe
 	if (!InventoryWidgetInstance && InventoryWidgetClass)
 	{
 		InventoryWidgetInstance = CreateWidget<UUserWidget>(PC, InventoryWidgetClass);
@@ -177,17 +192,15 @@ void AMyThirdPersonCharacter::ShowInventory()
 
 	bInventoryOpen = true;
 
-	// Opcional: pausar el juego
-	// UGameplayStatics::SetGamePaused(this, true);
-
-	// Cambiar a modo UI
 	FInputModeGameAndUI Mode;
 	Mode.SetHideCursorDuringCapture(false);
 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
 	if (InventoryWidgetInstance)
 	{
 		Mode.SetWidgetToFocus(InventoryWidgetInstance->TakeWidget());
 	}
+
 	PC->SetInputMode(Mode);
 	PC->bShowMouseCursor = true;
 }
@@ -204,10 +217,6 @@ void AMyThirdPersonCharacter::HideInventory()
 
 	bInventoryOpen = false;
 
-	// Opcional: reanudar
-	// UGameplayStatics::SetGamePaused(this, false);
-
-	// Volver a juego
 	FInputModeGameOnly Mode;
 	PC->SetInputMode(Mode);
 	PC->bShowMouseCursor = false;

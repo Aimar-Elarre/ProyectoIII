@@ -1,12 +1,15 @@
 #include "MyPlayerCharacter.h"
+
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "TimerManager.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/Engine.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
+
     GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
     GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 
@@ -28,6 +31,7 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     GetCharacterMovement()->bOrientRotationToMovement = false;
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
+
 void AMyPlayerCharacter::BeginPlay()
 {
     UpdateMovementSpeed();
@@ -74,17 +78,17 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
             CurrentStamina = FMath::Clamp(CurrentStamina, 0.f, MaxStamina);
         }
     }
+
     if (PlayerHUD)
     {
         PlayerHUD->UpdateStamina(GetStaminaPercent());
     }
 
     float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
-
-    float CurrentHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+    float CurrentCapsuleHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
     float NewHeight = FMath::FInterpTo(
-        CurrentHeight,
+        CurrentCapsuleHeight,
         TargetHeight,
         DeltaTime,
         CrouchSpeed
@@ -104,20 +108,28 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyPlayerCharacter::StartJump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &AMyPlayerCharacter::StopJump);
+
     PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
+
     PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AMyPlayerCharacter::StartRun);
     PlayerInputComponent->BindAction("Run", IE_Released, this, &AMyPlayerCharacter::StopRun);
+
     PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AMyPlayerCharacter::StartCrouch);
     PlayerInputComponent->BindAction("Crouch", IE_Released, this, &AMyPlayerCharacter::StopCrouch);
+
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
+
+    // NUEVO: soltar objeto con R
+    PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
 }
 
 void AMyPlayerCharacter::MoveForward(float Value)
 {
     if (Value != 0.0f)
+    {
         AddMovementInput(GetActorForwardVector(), Value);
+    }
 }
-
 
 void AMyPlayerCharacter::MoveRight(float Value)
 {
@@ -150,6 +162,7 @@ void AMyPlayerCharacter::StopJump()
 {
     StopJumping();
 }
+
 void AMyPlayerCharacter::Die()
 {
     if (bIsDead) return;
@@ -165,12 +178,15 @@ void AMyPlayerCharacter::Die()
         DisableInput(PC);
     }
 
-    GEngine->AddOnScreenDebugMessage(
-        -1,
-        2.f,
-        FColor::Red,
-        TEXT("ESTAS MUERTO")
-    );
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            2.f,
+            FColor::Red,
+            TEXT("ESTAS MUERTO")
+        );
+    }
 
     // Esperar 2 segundos y respawnear
     GetWorldTimerManager().SetTimer(
@@ -197,18 +213,22 @@ void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
 
     UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO EN: %s"), *LastCheckpointLocation.ToString());
 }
+
 void AMyPlayerCharacter::RespawnAtCheckpoint()
 {
     UE_LOG(LogTemp, Warning, TEXT("RESPAWN CHECKPOINT FLAG: %d"), bHasCheckpoint);
 
     if (!bHasCheckpoint)
     {
-        GEngine->AddOnScreenDebugMessage(
-            -1,
-            3.f,
-            FColor::Red,
-            TEXT("NO HAY CHECKPOINT GUARDADO")
-        );
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(
+                -1,
+                3.f,
+                FColor::Red,
+                TEXT("NO HAY CHECKPOINT GUARDADO")
+            );
+        }
         return;
     }
 
@@ -226,6 +246,7 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
         EnableInput(PC);
     }
 }
+
 void AMyPlayerCharacter::StartSlide()
 {
     if (bIsSliding) return;
@@ -248,6 +269,7 @@ void AMyPlayerCharacter::StartSlide()
         false
     );
 }
+
 void AMyPlayerCharacter::StopSlide()
 {
     bIsSliding = false;
@@ -255,6 +277,7 @@ void AMyPlayerCharacter::StopSlide()
 
     GetCharacterMovement()->GroundFriction = OriginalGroundFriction;
 }
+
 void AMyPlayerCharacter::Turn(float Value)
 {
     AddControllerYawInput(Value);
@@ -282,10 +305,12 @@ void AMyPlayerCharacter::StopRun()
 
     UpdateMovementSpeed();
 }
+
 float AMyPlayerCharacter::GetStaminaPercent() const
 {
     return CurrentStamina / MaxStamina;
 }
+
 void AMyPlayerCharacter::StartCrouch()
 {
     FVector HorizontalVelocity = GetVelocity();
@@ -299,6 +324,7 @@ void AMyPlayerCharacter::StartCrouch()
 
     bIsCrouching = true;
 }
+
 void AMyPlayerCharacter::StopCrouch()
 {
     bIsCrouching = false;
@@ -346,12 +372,29 @@ void AMyPlayerCharacter::Dash()
 
     LaunchCharacter(DashDir * DashStrength, true, false);
 
+    // Cuando pase el cooldown vuelve a permitir dash
     GetWorldTimerManager().SetTimer(
-        SlideTimerHandle,
-        this,
-        &AMyPlayerCharacter::RespawnAtCheckpoint,
-        2.0f,
+        DashCooldownHandle,
+        [this]()
+        {
+            bCanDash = true;
+        },
+        DashCooldown,
         false
     );
 }
 
+void AMyPlayerCharacter::DropItem()
+{
+    UE_LOG(LogTemp, Warning, TEXT("DROP pressed"));
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            2.f,
+            FColor::Yellow,
+            TEXT("DROP pressed")
+        );
+    }
+}

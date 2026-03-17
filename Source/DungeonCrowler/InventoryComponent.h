@@ -20,7 +20,7 @@ struct FInventoryEntry
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
 
-UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class DUNGEONCROWLER_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -42,6 +42,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	TArray<FInventoryEntry> GetItemsAsArray() const;
+
+	// EVENTO - Implementado en Blueprint
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Inventory")
+	void OnInventoryToggled(const TArray<FInventoryEntry>& CurrentItems);
 
 private:
 	UPROPERTY()

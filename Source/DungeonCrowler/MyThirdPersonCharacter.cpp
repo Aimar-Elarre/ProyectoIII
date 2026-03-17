@@ -12,6 +12,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "InventoryComponent.h"
 
 AMyThirdPersonCharacter::AMyThirdPersonCharacter()
 {
@@ -34,6 +35,16 @@ AMyThirdPersonCharacter::AMyThirdPersonCharacter()
 void AMyThirdPersonCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Instanciar InventoryComponent
+	if (InventoryComponentClass)
+	{
+		InventoryComponent = NewObject<UInventoryComponent>(this, InventoryComponentClass);
+		if (InventoryComponent)
+		{
+			InventoryComponent->RegisterComponent();
+		}
+	}
 
 	// Mapping Context (Enhanced Input)
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -169,10 +180,19 @@ void AMyThirdPersonCharacter::Input_Drop(const FInputActionValue& /*Value*/)
 
 void AMyThirdPersonCharacter::Input_Inventory_Toggle(const FInputActionValue& /*Value*/)
 {
-	UE_LOG(LogTemp, Warning, TEXT("TAB FUNCIONA"));
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnInventoryToggled(InventoryComponent->GetItemsAsArray());
+	}
 
-	if (bInventoryOpen) HideInventory();
-	else ShowInventory();
+	if (bInventoryOpen)
+	{
+		HideInventory();
+	}
+	else
+	{
+		ShowInventory();
+	}
 }
 
 void AMyThirdPersonCharacter::ShowInventory()

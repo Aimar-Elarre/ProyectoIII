@@ -10,6 +10,7 @@ class UInputMappingContext;
 class UInputAction;
 class UUserWidget;
 class USoundBase;
+class UInventoryComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -73,6 +74,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> IA_Drop;
 
+	// Inventory Component
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TSubclassOf<UInventoryComponent> InventoryComponentClass;
+
 	// UI
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> InventoryWidgetClass;
@@ -92,6 +97,9 @@ protected:
 
 private:
 	FTimerHandle DashCooldownHandle;
+
+	UPROPERTY()
+	TObjectPtr<UInventoryComponent> InventoryComponent = nullptr;
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> InventoryWidgetInstance = nullptr;

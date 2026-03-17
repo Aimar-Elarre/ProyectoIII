@@ -6,6 +6,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
+#include "Sound/SoundBase.h"
+#include "Components/AudioComponent.h"
 #include "MyPlayerHUD.h"
 #include "MyPlayerCharacter.generated.h"
 
@@ -41,6 +43,8 @@ public:
     void ResetDash();
     void UpdateMovementSpeed();
     void TryPlayFootstep();
+    void UpdateFootstepAudio(float ForwardValue);
+    void StopFootstepAudio();
     void MakeMovementNoise(float Loudness);
 
     // VIDA / RESPAWN
@@ -70,23 +74,30 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Camera")
     float FOVInterpSpeed = 8.f;
 
+    // AUDIO
     UPROPERTY(EditAnywhere, Category = "Audio")
     USoundBase* FootstepSound;
-
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    float WalkStepInterval = 0.5f;
 
     UPROPERTY(EditAnywhere, Category = "Audio")
     USoundBase* JumpSound;
 
     UPROPERTY(EditAnywhere, Category = "Audio")
-    float FootstepBlockAfterJump = 0.25f;
-    float FootstepBlockedUntil = 0.f;
+    USoundBase* DashSound;
+
+    UPROPERTY(VisibleAnywhere, Category = "Audio")
+    UAudioComponent* FootstepAudioComponent;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float WalkStepInterval = 0.5f;
 
     UPROPERTY(EditAnywhere, Category = "Audio")
     float RunStepInterval = 0.3f;
 
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float FootstepBlockAfterJump = 0.25f;
+
     float LastFootstepTime = 0.f;
+    float FootstepBlockedUntil = 0.f;
 
     // MOVEMENT
     UPROPERTY(EditAnywhere, Category = "Movement")
@@ -132,10 +143,18 @@ protected:
 
     // DASH
     UPROPERTY(EditAnywhere, Category = "Dash")
-    float DashStrength = 1000.f;
+    float DashStrength = 2000.f;
 
     UPROPERTY(EditAnywhere, Category = "Dash")
     float DashCooldown = 1.f;
+
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashFOVBoost = 8.f;
+
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashFOVRecoverSpeed = 10.f;
+
+    float CurrentDashFOVOffset = 0.f;
 
     bool bCanDash = true;
     FTimerHandle DashCooldownHandle;
@@ -171,13 +190,15 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     int32 ItemsCarried = 4;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+    int32 MaxItemsCarried = 8;
+
     UPROPERTY(EditAnywhere, Category = "Inventory")
     float SpeedPenaltyPerItem = 0.05f;
 
     UPROPERTY(EditAnywhere, Category = "Inventory")
     float MinSpeedMultiplier = 0.4f;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    int32 MaxItemsCarried = 8;
+
     // UI
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> PlayerHUDClass;

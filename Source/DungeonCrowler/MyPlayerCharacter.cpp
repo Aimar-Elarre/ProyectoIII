@@ -30,6 +30,11 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     GetCharacterMovement()->bOrientRotationToMovement = false;
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     GetCharacterMovement()->JumpZVelocity = JumpStrength;
+
+    FootstepAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FootstepAudioComponent"));
+    FootstepAudioComponent->SetupAttachment(RootComponent);
+    FootstepAudioComponent->bAutoActivate = false;
+    FootstepAudioComponent->bIsUISound = false;
 }
 
 void AMyPlayerCharacter::BeginPlay()
@@ -61,8 +66,45 @@ void AMyPlayerCharacter::BeginPlay()
             }
         }
     }
+    if (FootstepAudioComponent && FootstepSound)
+    {
+        FootstepAudioComponent->SetSound(FootstepSound);
+    }
+}
+void AMyPlayerCharacter::UpdateFootstepAudio(float ForwardValue)
+{
+    if (!FootstepAudioComponent || !FootstepSound) return;
+
+    bool bMovingForwardOrBackward = FMath::Abs(ForwardValue) > 0.01f;
+    bool bCanPlay =
+        bMovingForwardOrBackward &&
+        GetCharacterMovement()->IsMovingOnGround() &&
+        !bIsSliding &&
+        !bIsDead;
+
+    if (bCanPlay)
+    {
+        if (!FootstepAudioComponent->IsPlaying())
+        {
+            FootstepAudioComponent->Play();
+        }
+    }
+    else
+    {
+        if (FootstepAudioComponent->IsPlaying())
+        {
+            FootstepAudioComponent->Stop();
+        }
+    }
 }
 
+void AMyPlayerCharacter::StopFootstepAudio()
+{
+    if (FootstepAudioComponent && FootstepAudioComponent->IsPlaying())
+    {
+        FootstepAudioComponent->Stop();
+    }
+}
 void AMyPlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -118,8 +160,18 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     if (Camera)
     {
         float TargetFOV = bIsRunning ? RunFOV : NormalFOV;
-        float NewFOV = FMath::FInterpTo(Camera->FieldOfView, TargetFOV, DeltaTime, FOVInterpSpeed);
+
+        CurrentDashFOVOffset = FMath::FInterpTo(CurrentDashFOVOffset, 0.f, DeltaTime, DashFOVRecoverSpeed);
+
+        float FinalTargetFOV = TargetFOV + CurrentDashFOVOffset;
+        float NewFOV = FMath::FInterpTo(Camera->FieldOfView, FinalTargetFOV, DeltaTime, FOVInterpSpeed);
+
         Camera->SetFieldOfView(NewFOV);
+    }
+
+    if (!GetCharacterMovement()->IsMovingOnGround() || bIsDead || bIsSliding)
+    {
+        StopFootstepAudio();
     }
 }
 void AMyPlayerCharacter::TryPlayFootstep()
@@ -164,14 +216,14 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 }
 void AMyPlayerCharacter::MoveForward(float Value)
 {
+    UpdateFootstepAudio(Value);
+
     if (Value != 0.0f)
     {
         AddMovementInput(GetActorForwardVector(), Value);
 
         float Loudness = bIsRunning ? 0.8f : 0.4f;
         MakeMovementNoise(Loudness);
-
-        TryPlayFootstep();
     }
 }
 
@@ -323,6 +375,16 @@ void AMyPlayerCharacter::Dash()
     DashDir.Normalize();
 
     LaunchCharacter(DashDir * DashStrength, true, false);
+
+    if (DashSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            this,
+            DashSound,
+            GetActorLocation()
+        );
+    }
+
     MakeMovementNoise(1.2f);
 
     GetWorldTimerManager().SetTimer(
@@ -333,7 +395,6 @@ void AMyPlayerCharacter::Dash()
         false
     );
 }
-
 void AMyPlayerCharacter::ResetDash()
 {
     bCanDash = true;

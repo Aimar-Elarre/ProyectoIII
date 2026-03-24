@@ -42,7 +42,9 @@ public:
     void Dash();
     void ResetDash();
     void UpdateMovementSpeed();
+    float CurrentCapsuleHeight;
     void TryPlayFootstep();
+    void DropItem();
     void UpdateFootstepAudio(float ForwardValue);
     void StopFootstepAudio();
     void MakeMovementNoise(float Loudness);

@@ -13,7 +13,6 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
     GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 
-    // Cámara FPS
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
     SpringArm->SetupAttachment(RootComponent);
     SpringArm->TargetArmLength = 0.f;
@@ -21,23 +20,24 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(SpringArm);
-    Camera->bUsePawnControlRotation = true;
+    Camera->bUsePawnControlRotation = false; // importante si el SpringArm ya usa la rotación
     Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
 
     bUseControllerRotationYaw = true;
-    bUseControllerRotationPitch = true;
+    bUseControllerRotationPitch = false; // esta es la clave
     bUseControllerRotationRoll = false;
 
     GetCharacterMovement()->bOrientRotationToMovement = false;
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     GetCharacterMovement()->JumpZVelocity = JumpStrength;
 
+    CurrentCapsuleHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+
     FootstepAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FootstepAudioComponent"));
     FootstepAudioComponent->SetupAttachment(RootComponent);
     FootstepAudioComponent->bAutoActivate = false;
     FootstepAudioComponent->bIsUISound = false;
 }
-
 void AMyPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
@@ -226,20 +226,31 @@ void AMyPlayerCharacter::MoveForward(float Value)
 {
     UpdateFootstepAudio(Value);
 
-    if (Value != 0.0f)
+    if (Controller && Value != 0.0f)
     {
-        AddMovementInput(GetActorForwardVector(), Value);
+        const FRotator ControlRot = Controller->GetControlRotation();
+        const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
+
+        const FVector ForwardDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
+        AddMovementInput(ForwardDir, Value);
 
         float Loudness = bIsRunning ? 0.8f : 0.4f;
         MakeMovementNoise(Loudness);
     }
 }
-
+void AMyPlayerCharacter::DropItem()
+{
+    // lógica para soltar objeto
+}
 void AMyPlayerCharacter::MoveRight(float Value)
 {
-    if (Value != 0.0f)
+    if (Controller && Value != 0.0f)
     {
-        AddMovementInput(GetActorRightVector(), Value);
+        const FRotator ControlRot = Controller->GetControlRotation();
+        const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
+
+        const FVector RightDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
+        AddMovementInput(RightDir, Value);
 
         float Loudness = bIsRunning ? 0.8f : 0.4f;
         MakeMovementNoise(Loudness);

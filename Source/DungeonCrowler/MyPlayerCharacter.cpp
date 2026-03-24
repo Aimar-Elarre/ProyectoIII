@@ -20,16 +20,23 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(SpringArm);
-    Camera->bUsePawnControlRotation = false; // importante si el SpringArm ya usa la rotación
+    Camera->bUsePawnControlRotation = false;
     Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
 
     bUseControllerRotationYaw = true;
-    bUseControllerRotationPitch = false; // esta es la clave
+    bUseControllerRotationPitch = false;
     bUseControllerRotationRoll = false;
 
     GetCharacterMovement()->bOrientRotationToMovement = false;
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-    GetCharacterMovement()->JumpZVelocity = JumpStrength;
+
+    GetCharacterMovement()->JumpZVelocity = 420.f;
+    GetCharacterMovement()->GravityScale = 1.6f;
+    GetCharacterMovement()->AirControl = 0.5f;
+    GetCharacterMovement()->FallingLateralFriction = 1.0f;
+    GetCharacterMovement()->BrakingDecelerationFalling = 1500.f;
+
+    JumpMaxHoldTime = 0.0f;
 
     CurrentCapsuleHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
@@ -53,6 +60,15 @@ void AMyPlayerCharacter::BeginPlay()
         Camera->SetFieldOfView(NormalFOV);
     }
 
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        if (PC->PlayerCameraManager)
+        {
+            PC->PlayerCameraManager->ViewPitchMin = -40.f;
+            PC->PlayerCameraManager->ViewPitchMax = 70.f;
+        }
+    }
+
     if (IsLocallyControlled())
     {
         UE_LOG(LogTemp, Warning, TEXT("WIDGET CREATED"));
@@ -67,6 +83,7 @@ void AMyPlayerCharacter::BeginPlay()
             }
         }
     }
+
     if (FootstepAudioComponent && FootstepSound)
     {
         FootstepAudioComponent->SetSound(FootstepSound);

@@ -5,6 +5,9 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "TimerManager.h"
+#include "Sound/SoundBase.h"
+#include "Components/AudioComponent.h"
 #include "MyPlayerHUD.h"
 #include "MyPlayerCharacter.generated.h"
 
@@ -36,50 +39,79 @@ public:
     void StopCrouch();
     void StartSlide();
     void StopSlide();
+    void Dash();
+    void ResetDash();
+    void UpdateMovementSpeed();
+    void TryPlayFootstep();
+    void UpdateFootstepAudio(float ForwardValue);
+    void StopFootstepAudio();
+    void MakeMovementNoise(float Loudness);
 
     // VIDA / RESPAWN
     void Die();
     void KillPlayer();
+    void TakeDamageCustom(float DamageAmount);
     void SetLastCheckpoint(FVector NewLocation);
     void RespawnAtCheckpoint();
-    void TakeDamageCustom(float DamageAmount);
 
-    // DROP ITEM
-    void DropItem();
+    UFUNCTION(BlueprintPure)
+    float GetStaminaPercent() const;
 
-    // SLIDE
-    bool bIsSliding = false;
-    FTimerHandle RespawnTimerHandle;
-    bool bHasCheckpoint = false;
-    float OriginalGroundFriction = 0.f;
-    float MinSlideSpeed = 350.f;
-    bool bIsDead = false;
-    FVector LastCheckpointLocation = FVector::ZeroVector;
+protected:
+    // C�MARA
+    UPROPERTY(VisibleAnywhere, Category = "Camera")
+    USpringArmComponent* SpringArm;
 
-    UPROPERTY(EditAnywhere, Category = "Slide")
-    float SlideImpulse = 1200.f;
+    UPROPERTY(VisibleAnywhere, Category = "Camera")
+    UCameraComponent* Camera;
 
-    UPROPERTY(EditAnywhere, Category = "Slide")
-    float SlideFriction = 0.5f;
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float NormalFOV = 90.f;
 
-    UPROPERTY(EditAnywhere, Category = "Slide")
-    float SlideDuration = 0.75f;
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float RunFOV = 98.f;
 
-    FTimerHandle SlideTimerHandle;
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float FOVInterpSpeed = 8.f;
 
-    // DASH
-    void Dash();
+    // AUDIO
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    USoundBase* FootstepSound;
 
-    UPROPERTY(EditAnywhere, Category = "Dash")
-    float DashStrength = 1000.f;
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    USoundBase* JumpSound;
 
-    UPROPERTY(EditAnywhere, Category = "Dash")
-    float DashCooldown = 1.f;
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    USoundBase* DashSound;
 
-    bool bCanDash = true;
-    FTimerHandle DashCooldownHandle;
+    UPROPERTY(VisibleAnywhere, Category = "Audio")
+    UAudioComponent* FootstepAudioComponent;
 
-    // CROUCH SUAVE
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float WalkStepInterval = 0.5f;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float RunStepInterval = 0.3f;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float FootstepBlockAfterJump = 0.25f;
+
+    float LastFootstepTime = 0.f;
+    float FootstepBlockedUntil = 0.f;
+
+    // MOVEMENT
+    UPROPERTY(EditAnywhere, Category = "Movement")
+    float WalkSpeed = 600.f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+    float RunSpeed = 1000.f;
+
+    UPROPERTY(EditAnywhere, Category = "Movement")
+    float JumpStrength = 600.f;
+
+    bool bIsRunning = false;
+
+    // CROUCH
     bool bIsCrouching = false;
 
     UPROPERTY(EditAnywhere, Category = "Crouch")
@@ -91,17 +123,41 @@ public:
     UPROPERTY(EditAnywhere, Category = "Crouch")
     float CrouchSpeed = 8.f;
 
-    // VELOCIDADES
-    UPROPERTY(EditAnywhere, Category = "Movement")
-    float WalkSpeed = 600.f;
+    // SLIDE
+    bool bIsSliding = false;
 
-    UPROPERTY(EditAnywhere, Category = "Movement")
-    float RunSpeed = 1000.f;
+    UPROPERTY(EditAnywhere, Category = "Slide")
+    float SlideImpulse = 1200.f;
 
-    UPROPERTY(EditAnywhere, Category = "Movement")
-    float JumpStrength = 600.f;
+    UPROPERTY(EditAnywhere, Category = "Slide")
+    float SlideFriction = 0.05f;
 
-    bool bIsRunning = false;
+    UPROPERTY(EditAnywhere, Category = "Slide")
+    float SlideDuration = 0.75f;
+
+    UPROPERTY(EditAnywhere, Category = "Slide")
+    float MinSlideSpeed = 350.f;
+
+    float OriginalGroundFriction = 8.f;
+    FTimerHandle SlideTimerHandle;
+
+    // DASH
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashStrength = 2000.f;
+
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashCooldown = 1.f;
+
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashFOVBoost = 8.f;
+
+    UPROPERTY(EditAnywhere, Category = "Dash")
+    float DashFOVRecoverSpeed = 10.f;
+
+    float CurrentDashFOVOffset = 0.f;
+
+    bool bCanDash = true;
+    FTimerHandle DashCooldownHandle;
 
     // STAMINA
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
@@ -123,34 +179,30 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
     float CurrentHealth = 0.f;
 
-    // UI
+    bool bIsDead = false;
+
+    // CHECKPOINT
+    bool bHasCheckpoint = false;
+    FVector LastCheckpointLocation = FVector::ZeroVector;
+    FTimerHandle RespawnTimerHandle;
 
     // INVENTARIO / PESO
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+    int32 ItemsCarried = 4;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    int ItemsCarried = 4;
+    int32 MaxItemsCarried = 8;
 
     UPROPERTY(EditAnywhere, Category = "Inventory")
-    float SpeedPenaltyPerItem = 0.05f; // 5% menos velocidad por objeto
+    float SpeedPenaltyPerItem = 0.05f;
 
     UPROPERTY(EditAnywhere, Category = "Inventory")
-    float MinSpeedMultiplier = 0.4f; // nunca bajar de 40%
+    float MinSpeedMultiplier = 0.4f;
 
-    void UpdateMovementSpeed();
-
+    // UI
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> PlayerHUDClass;
 
     UPROPERTY()
     UMyPlayerHUD* PlayerHUD = nullptr;
-
-    // CÁMARA
-    UPROPERTY(VisibleAnywhere)
-    USpringArmComponent* SpringArm = nullptr;
-
-    UPROPERTY(VisibleAnywhere)
-    UCameraComponent* Camera = nullptr;
-
-    UFUNCTION(BlueprintPure)
-    float GetStaminaPercent() const;
 };

@@ -2,9 +2,9 @@
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "TimerManager.h"
-#include "GameFramework/PlayerController.h"
-#include "Engine/Engine.h"
+#include "Perception/AISense_Hearing.h"
+#include "Kismet/GameplayStatics.h"
+
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -30,15 +30,28 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
     GetCharacterMovement()->bOrientRotationToMovement = false;
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+    GetCharacterMovement()->JumpZVelocity = JumpStrength;
+
+    FootstepAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FootstepAudioComponent"));
+    FootstepAudioComponent->SetupAttachment(RootComponent);
+    FootstepAudioComponent->bAutoActivate = false;
+    FootstepAudioComponent->bIsUISound = false;
 }
 
 void AMyPlayerCharacter::BeginPlay()
 {
-    UpdateMovementSpeed();
     Super::BeginPlay();
 
     CurrentHealth = MaxHealth;
     CurrentStamina = MaxStamina;
+
+    GetCharacterMovement()->JumpZVelocity = JumpStrength;
+    UpdateMovementSpeed();
+
+    if (Camera)
+    {
+        Camera->SetFieldOfView(NormalFOV);
+    }
 
     if (IsLocallyControlled())
     {
@@ -54,12 +67,58 @@ void AMyPlayerCharacter::BeginPlay()
             }
         }
     }
+    if (FootstepAudioComponent && FootstepSound)
+    {
+        FootstepAudioComponent->SetSound(FootstepSound);
+    }
+}
+void AMyPlayerCharacter::UpdateFootstepAudio(float ForwardValue)
+{
+    if (!FootstepAudioComponent || !FootstepSound) return;
+
+    bool bMovingForwardOrBackward = FMath::Abs(ForwardValue) > 0.01f;
+    bool bCanPlay =
+        bMovingForwardOrBackward &&
+        GetCharacterMovement()->IsMovingOnGround() &&
+        !bIsSliding &&
+        !bIsDead;
+
+    if (bCanPlay)
+    {
+        if (!FootstepAudioComponent->IsPlaying())
+        {
+            FootstepAudioComponent->Play();
+        }
+    }
+    else
+    {
+        if (FootstepAudioComponent->IsPlaying())
+        {
+            FootstepAudioComponent->Stop();
+        }
+    }
 }
 
+void AMyPlayerCharacter::StopFootstepAudio()
+{
+    if (FootstepAudioComponent && FootstepAudioComponent->IsPlaying())
+    {
+        FootstepAudioComponent->Stop();
+    }
+}
 void AMyPlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    FVector HorizontalVelocity = GetVelocity();
+    HorizontalVelocity.Z = 0.f;
+
+    if (bIsRunning && (!GetCharacterMovement()->IsMovingOnGround() || HorizontalVelocity.SizeSquared() <= 1.f))
+    {
+        StopRun();
+    }
+
+    // Stamina
     if (bIsRunning)
     {
         CurrentStamina -= StaminaDrainRate * DeltaTime;
@@ -82,10 +141,12 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     if (PlayerHUD)
     {
         PlayerHUD->UpdateStamina(GetStaminaPercent());
+        PlayerHUD->UpdateCarry(ItemsCarried, MaxItemsCarried);
     }
 
+    // Crouch suave
     float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
-    float CurrentCapsuleHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+    float CurrentHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
     float NewHeight = FMath::FInterpTo(
         CurrentCapsuleHeight,
@@ -95,6 +156,45 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     );
 
     GetCapsuleComponent()->SetCapsuleHalfHeight(NewHeight, true);
+
+    // FOV dinámico al correr
+    if (Camera)
+    {
+        float TargetFOV = bIsRunning ? RunFOV : NormalFOV;
+
+        CurrentDashFOVOffset = FMath::FInterpTo(CurrentDashFOVOffset, 0.f, DeltaTime, DashFOVRecoverSpeed);
+
+        float FinalTargetFOV = TargetFOV + CurrentDashFOVOffset;
+        float NewFOV = FMath::FInterpTo(Camera->FieldOfView, FinalTargetFOV, DeltaTime, FOVInterpSpeed);
+
+        Camera->SetFieldOfView(NewFOV);
+    }
+
+    if (!GetCharacterMovement()->IsMovingOnGround() || bIsDead || bIsSliding)
+    {
+        StopFootstepAudio();
+    }
+}
+void AMyPlayerCharacter::TryPlayFootstep()
+{
+    if (!FootstepSound) return;
+    if (!GetCharacterMovement()->IsMovingOnGround()) return;
+
+    float CurrentTime = GetWorld()->GetTimeSeconds();
+
+    if (CurrentTime < FootstepBlockedUntil) return;
+
+    float StepInterval = bIsRunning ? RunStepInterval : WalkStepInterval;
+
+    if (CurrentTime - LastFootstepTime < StepInterval) return;
+
+    LastFootstepTime = CurrentTime;
+
+    UGameplayStatics::PlaySoundAtLocation(
+        this,
+        FootstepSound,
+        GetActorLocation()
+    );
 }
 
 void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -122,12 +222,16 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     // NUEVO: soltar objeto con R
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
 }
-
 void AMyPlayerCharacter::MoveForward(float Value)
 {
+    UpdateFootstepAudio(Value);
+
     if (Value != 0.0f)
     {
         AddMovementInput(GetActorForwardVector(), Value);
+
+        float Loudness = bIsRunning ? 0.8f : 0.4f;
+        MakeMovementNoise(Loudness);
     }
 }
 
@@ -136,7 +240,204 @@ void AMyPlayerCharacter::MoveRight(float Value)
     if (Value != 0.0f)
     {
         AddMovementInput(GetActorRightVector(), Value);
+
+        float Loudness = bIsRunning ? 0.8f : 0.4f;
+        MakeMovementNoise(Loudness);
     }
+}
+
+void AMyPlayerCharacter::Turn(float Value)
+{
+    AddControllerYawInput(Value);
+}
+
+void AMyPlayerCharacter::LookUp(float Value)
+{
+    AddControllerPitchInput(Value);
+}
+
+void AMyPlayerCharacter::MakeMovementNoise(float Loudness)
+{
+    UAISense_Hearing::ReportNoiseEvent(
+        GetWorld(),
+        GetActorLocation(),
+        Loudness,
+        this
+    );
+}
+
+void AMyPlayerCharacter::StartJump()
+{
+    if (!GetCharacterMovement()->IsMovingOnGround()) return;
+
+    Jump();
+
+    MakeMovementNoise(1.0f);
+
+    float CurrentTime = GetWorld()->GetTimeSeconds();
+    FootstepBlockedUntil = CurrentTime + FootstepBlockAfterJump;
+    LastFootstepTime = CurrentTime;
+
+    if (JumpSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            this,
+            JumpSound,
+            GetActorLocation()
+        );
+    }
+}
+
+void AMyPlayerCharacter::StopJump()
+{
+    StopJumping();
+}
+
+void AMyPlayerCharacter::StartRun()
+{
+    if (bIsSliding) return;
+    if (bIsCrouching) return;
+    if (CurrentStamina <= 0.f) return;
+    if (!GetCharacterMovement()->IsMovingOnGround()) return;
+
+    FVector HorizontalVelocity = GetVelocity();
+    HorizontalVelocity.Z = 0.f;
+
+    if (HorizontalVelocity.SizeSquared() <= 1.f) return;
+
+    bIsRunning = true;
+    UpdateMovementSpeed();
+}
+
+void AMyPlayerCharacter::StopRun()
+{
+    bIsRunning = false;
+    UpdateMovementSpeed();
+}
+
+void AMyPlayerCharacter::StartCrouch()
+{
+    FVector HorizontalVelocity = GetVelocity();
+    HorizontalVelocity.Z = 0.f;
+
+    if (HorizontalVelocity.Size() > MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
+    {
+        StartSlide();
+        return;
+    }
+
+    bIsCrouching = true;
+    StopRun();
+}
+
+void AMyPlayerCharacter::StopCrouch()
+{
+    bIsCrouching = false;
+    UpdateMovementSpeed();
+}
+
+void AMyPlayerCharacter::StartSlide()
+{
+    if (bIsSliding) return;
+
+    bIsSliding = true;
+    bIsCrouching = true;
+    bIsRunning = false;
+
+    OriginalGroundFriction = GetCharacterMovement()->GroundFriction;
+    GetCharacterMovement()->GroundFriction = SlideFriction;
+
+    FVector SlideDirection = GetVelocity();
+    SlideDirection.Z = 0.f;
+    SlideDirection = SlideDirection.GetSafeNormal();
+
+    LaunchCharacter(SlideDirection * SlideImpulse, true, false);
+
+    GetWorldTimerManager().SetTimer(
+        SlideTimerHandle,
+        this,
+        &AMyPlayerCharacter::StopSlide,
+        SlideDuration,
+        false
+    );
+}
+
+void AMyPlayerCharacter::StopSlide()
+{
+    bIsSliding = false;
+    bIsCrouching = true;
+
+    GetCharacterMovement()->GroundFriction = OriginalGroundFriction;
+    UpdateMovementSpeed();
+}
+
+void AMyPlayerCharacter::Dash()
+{
+    if (!bCanDash) return;
+
+    bCanDash = false;
+
+    const FRotator ControlRot = Controller ? Controller->GetControlRotation() : GetActorRotation();
+    FVector DashDir = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::X);
+    DashDir.Z = 0.f;
+    DashDir.Normalize();
+
+    LaunchCharacter(DashDir * DashStrength, true, false);
+
+    if (DashSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            this,
+            DashSound,
+            GetActorLocation()
+        );
+    }
+
+    MakeMovementNoise(1.2f);
+
+    GetWorldTimerManager().SetTimer(
+        DashCooldownHandle,
+        this,
+        &AMyPlayerCharacter::ResetDash,
+        DashCooldown,
+        false
+    );
+}
+void AMyPlayerCharacter::ResetDash()
+{
+    bCanDash = true;
+}
+
+void AMyPlayerCharacter::UpdateMovementSpeed()
+{
+    float Multiplier = 1.0f - (ItemsCarried * SpeedPenaltyPerItem);
+    Multiplier = FMath::Clamp(Multiplier, MinSpeedMultiplier, 1.0f);
+
+    float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
+
+    if (bIsCrouching)
+    {
+        BaseSpeed *= 0.55f;
+    }
+
+    float FinalSpeed = BaseSpeed * Multiplier;
+    GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
+
+    float FinalJump = JumpStrength * Multiplier;
+    GetCharacterMovement()->JumpZVelocity = FinalJump;
+
+    UE_LOG(LogTemp, Warning, TEXT("Items: %d | Speed: %f | Jump: %f"),
+        ItemsCarried, FinalSpeed, FinalJump);
+}
+
+float AMyPlayerCharacter::GetStaminaPercent() const
+{
+    if (MaxStamina <= 0.f)
+    {
+        return 0.f;
+    }
+
+    return CurrentStamina / MaxStamina;
 }
 
 void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
@@ -150,17 +451,6 @@ void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
     {
         Die();
     }
-}
-
-
-void AMyPlayerCharacter::StartJump()
-{
-    Jump();
-}
-
-void AMyPlayerCharacter::StopJump()
-{
-    StopJumping();
 }
 
 void AMyPlayerCharacter::Die()
@@ -188,7 +478,6 @@ void AMyPlayerCharacter::Die()
         );
     }
 
-    // Esperar 2 segundos y respawnear
     GetWorldTimerManager().SetTimer(
         RespawnTimerHandle,
         this,
@@ -237,164 +526,11 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     CurrentHealth = MaxHealth;
     bIsDead = false;
 
-    // Volver a activar movimiento
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    UpdateMovementSpeed();
 
-    // Volver a activar input
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
         EnableInput(PC);
-    }
-}
-
-void AMyPlayerCharacter::StartSlide()
-{
-    if (bIsSliding) return;
-
-    bIsSliding = true;
-
-    OriginalGroundFriction = GetCharacterMovement()->GroundFriction;
-    GetCharacterMovement()->GroundFriction = 0.05f;
-
-    FVector SlideVelocity = GetVelocity();
-    SlideVelocity.Z = 0.f;
-
-    LaunchCharacter(SlideVelocity * 1.2f, true, false);
-
-    GetWorldTimerManager().SetTimer(
-        SlideTimerHandle,
-        this,
-        &AMyPlayerCharacter::StopSlide,
-        1.0f,
-        false
-    );
-}
-
-void AMyPlayerCharacter::StopSlide()
-{
-    bIsSliding = false;
-    bIsCrouching = true;
-
-    GetCharacterMovement()->GroundFriction = OriginalGroundFriction;
-}
-
-void AMyPlayerCharacter::Turn(float Value)
-{
-    AddControllerYawInput(Value);
-}
-
-void AMyPlayerCharacter::LookUp(float Value)
-{
-    AddControllerPitchInput(Value);
-}
-
-void AMyPlayerCharacter::StartRun()
-{
-    if (bIsSliding) return;
-    if (bIsCrouching) return;
-    if (CurrentStamina <= 0.f) return;
-
-    bIsRunning = true;
-
-    UpdateMovementSpeed();
-}
-
-void AMyPlayerCharacter::StopRun()
-{
-    bIsRunning = false;
-
-    UpdateMovementSpeed();
-}
-
-float AMyPlayerCharacter::GetStaminaPercent() const
-{
-    return CurrentStamina / MaxStamina;
-}
-
-void AMyPlayerCharacter::StartCrouch()
-{
-    FVector HorizontalVelocity = GetVelocity();
-    HorizontalVelocity.Z = 0.f;
-
-    if (HorizontalVelocity.Size() > MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
-    {
-        StartSlide();
-        return;
-    }
-
-    bIsCrouching = true;
-}
-
-void AMyPlayerCharacter::StopCrouch()
-{
-    bIsCrouching = false;
-}
-
-void AMyPlayerCharacter::UpdateMovementSpeed()
-{
-    float Multiplier = 1.0f - (ItemsCarried * SpeedPenaltyPerItem);
-    Multiplier = FMath::Clamp(Multiplier, MinSpeedMultiplier, 1.0f);
-
-    float BaseSpeed = bIsRunning ? RunSpeed : WalkSpeed;
-    float FinalSpeed = BaseSpeed * Multiplier;
-
-    GetCharacterMovement()->MaxWalkSpeed = FinalSpeed;
-
-    // Afectar también al salto
-    float FinalJump = JumpStrength * Multiplier;
-    GetCharacterMovement()->JumpZVelocity = FinalJump;
-
-    // DEBUG
-    UE_LOG(LogTemp, Warning, TEXT("Items:%d | Multiplier:%f | Speed:%f | Jump:%f"),
-        ItemsCarried, Multiplier, FinalSpeed, FinalJump);
-
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(
-            -1,
-            2.f,
-            FColor::Green,
-            FString::Printf(TEXT("Items:%d | Speed:%.0f | Jump:%.0f"),
-                ItemsCarried, FinalSpeed, FinalJump)
-        );
-    }
-}
-void AMyPlayerCharacter::Dash()
-{
-    if (!bCanDash) return;
-
-    bCanDash = false;
-
-    const FRotator ControlRot = Controller ? Controller->GetControlRotation() : GetActorRotation();
-    FVector DashDir = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::X);
-    DashDir.Z = 0.f;
-    DashDir.Normalize();
-
-    LaunchCharacter(DashDir * DashStrength, true, false);
-
-    // Cuando pase el cooldown vuelve a permitir dash
-    GetWorldTimerManager().SetTimer(
-        DashCooldownHandle,
-        [this]()
-        {
-            bCanDash = true;
-        },
-        DashCooldown,
-        false
-    );
-}
-
-void AMyPlayerCharacter::DropItem()
-{
-    UE_LOG(LogTemp, Warning, TEXT("DROP pressed"));
-
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(
-            -1,
-            2.f,
-            FColor::Yellow,
-            TEXT("DROP pressed")
-        );
     }
 }

@@ -1,41 +1,57 @@
-
 #include "PickupItemActor.h"
-#include "Components/SphereComponent.h"
+
+#include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "GameFramework/Character.h"
-#include "InventoryComponent.h"
+#include "MyPlayerCharacter.h"
 
 APickupItemActor::APickupItemActor()
 {
-    PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = false;
 
-    Trigger = CreateDefaultSubobject<USphereComponent>(TEXT("Trigger"));
-    SetRootComponent(Trigger);
-    Trigger->InitSphereRadius(80.f);
-    Trigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    Trigger->SetCollisionResponseToAllChannels(ECR_Ignore);
-    Trigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	//CREAR TRIGGER (ROOT)
+	Trigger = CreateDefaultSubobject<UBoxComponent>(TEXT("Trigger"));
+	SetRootComponent(Trigger);
 
-    Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-    Mesh->SetupAttachment(RootComponent);
-    Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Trigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Trigger->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Trigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	Trigger->SetGenerateOverlapEvents(true);
 
-    Trigger->OnComponentBeginOverlap.AddDynamic(this, &APickupItemActor::OnOverlapBegin);
+	//CREAR MESH
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	Mesh->SetupAttachment(Trigger);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
-void APickupItemActor::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void APickupItemActor::BeginPlay()
 {
-    if (!ItemData) return;
+	Super::BeginPlay();
 
-    ACharacter* Char = Cast<ACharacter>(OtherActor);
-    if (!Char) return;
+	//ACTIVAR EVENTO OVERLAP
+	Trigger->OnComponentBeginOverlap.AddDynamic(this, &APickupItemActor::OnOverlapBegin);
+}
 
-    UInventoryComponent* Inv = Char->FindComponentByClass<UInventoryComponent>();
-    if (!Inv) return;
+void APickupItemActor::OnOverlapBegin(
+	UPrimitiveComponent* OverlappedComp,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex,
+	bool bFromSweep,
+	const FHitResult& SweepResult
+)
+{
+	if (!OtherActor) return;
 
-    if (Inv->AddItem(ItemData, Quantity))
-    {
-        Destroy();
-    }
+	//CAST AL PLAYER
+	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
+
+	if (Player)
+	{
+		Player->AddItemsCarried(1);
+
+		UE_LOG(LogTemp, Warning, TEXT("Objeto recogido. Total: %d"), Player->GetItemsCarried());
+
+		//DESTRUIR OBJETO
+		Destroy();
+	}
 }

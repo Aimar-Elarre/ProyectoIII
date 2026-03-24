@@ -4,33 +4,36 @@
 #include "GameFramework/Actor.h"
 #include "PickupItemActor.generated.h"
 
-class USphereComponent;
+class UBoxComponent;
 class UStaticMeshComponent;
-class UItemData;
 
 UCLASS()
 class DUNGEONCROWLER_API APickupItemActor : public AActor
 {
 	GENERATED_BODY()
-
-public:
+	
+public:	
 	APickupItemActor();
 
 protected:
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<USphereComponent> Trigger;
+	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UStaticMeshComponent> Mesh;
+	// 🔥 TRIGGER (HEREDADO EN BP)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UBoxComponent* Trigger;
 
-	UPROPERTY(EditAnywhere, Category = "Pickup")
-	TObjectPtr<const UItemData> ItemData;
+	// 🔥 MESH (VISIBLE EN EL MUNDO)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UStaticMeshComponent* Mesh;
 
-	UPROPERTY(EditAnywhere, Category = "Pickup", meta = (ClampMin = "1"))
-	int32 Quantity = 1;
-
+	// 🔥 EVENTO DE OVERLAP
 	UFUNCTION()
-	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
-		bool bFromSweep, const FHitResult& SweepResult);
+	void OnOverlapBegin(
+		UPrimitiveComponent* OverlappedComp,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+	);
 };

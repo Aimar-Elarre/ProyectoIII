@@ -11,6 +11,8 @@
 #include "MyPlayerHUD.h"
 #include "MyPlayerCharacter.generated.h"
 
+class APickupItemActor;
+
 UCLASS()
 class DUNGEONCROWLER_API AMyPlayerCharacter : public ACharacter
 {
@@ -59,8 +61,14 @@ public:
     UFUNCTION(BlueprintPure)
     float GetStaminaPercent() const;
 
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    void AddItemsCarried(int32 Count = 1);
+
+    UFUNCTION(BlueprintPure, Category = "Inventory")
+    int32 GetItemsCarried() const;
+
 protected:
-    // C�MARA
+    // CÁMARA
     UPROPERTY(VisibleAnywhere, Category = "Camera")
     USpringArmComponent* SpringArm;
 
@@ -200,6 +208,10 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "Inventory")
     float MinSpeedMultiplier = 0.4f;
+
+    // QUÉ PICKUP SE CREA AL SOLTAR
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+    TSubclassOf<APickupItemActor> PickupItemClass;
 
     // UI
     UPROPERTY(EditAnywhere, Category = "UI")

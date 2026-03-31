@@ -4,7 +4,10 @@
 #include "Components/CapsuleComponent.h"
 #include "Perception/AISense_Hearing.h"
 #include "Kismet/GameplayStatics.h"
-
+#include "TimerManager.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/Engine.h"
+#include "PickupItemActor.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -242,7 +245,7 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
 
-    // NUEVO: soltar objeto con R
+    // Soltar objeto con R
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
 }
 void AMyPlayerCharacter::MoveForward(float Value)
@@ -261,10 +264,7 @@ void AMyPlayerCharacter::MoveForward(float Value)
         MakeMovementNoise(Loudness);
     }
 }
-void AMyPlayerCharacter::DropItem()
-{
-    // lógica para soltar objeto
-}
+
 void AMyPlayerCharacter::MoveRight(float Value)
 {
     if (Controller && Value != 0.0f)
@@ -473,6 +473,17 @@ void AMyPlayerCharacter::UpdateMovementSpeed()
         ItemsCarried, FinalSpeed, FinalJump);
 }
 
+void AMyPlayerCharacter::AddItemsCarried(int32 Count)
+{
+    ItemsCarried = FMath::Clamp(ItemsCarried + Count, 0, MaxItemsCarried);
+    UpdateMovementSpeed();
+}
+
+int32 AMyPlayerCharacter::GetItemsCarried() const
+{
+    return ItemsCarried;
+}
+
 float AMyPlayerCharacter::GetStaminaPercent() const
 {
     if (MaxStamina <= 0.f)
@@ -604,5 +615,54 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
         EnableInput(PC);
+    }
+}
+
+void AMyPlayerCharacter::DropItem()
+{
+    if (ItemsCarried <= 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No hay objetos para soltar"));
+        return;
+    }
+
+    if (!PickupItemClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PickupItemClass no está asignado en el personaje"));
+        return;
+    }
+
+    FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
+    FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    APickupItemActor* SpawnedPickup = GetWorld()->SpawnActor<APickupItemActor>(
+        PickupItemClass,
+        SpawnLocation,
+        SpawnRotation,
+        SpawnParams
+    );
+
+    if (!SpawnedPickup)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No se pudo spawnear el pickup"));
+        return;
+    }
+
+    ItemsCarried--;
+    UpdateMovementSpeed();
+
+    UE_LOG(LogTemp, Warning, TEXT("Objeto soltado. ItemsCarried = %d"), ItemsCarried);
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            2.f,
+            FColor::Yellow,
+            FString::Printf(TEXT("Objeto soltado. Quedan: %d"), ItemsCarried)
+        );
     }
 }

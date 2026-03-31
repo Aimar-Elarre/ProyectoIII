@@ -24,9 +24,9 @@ ATrapDamageActor::ATrapDamageActor()
 void ATrapDamageActor::OnTriggerBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!OtherActor) return;
+ 	if (!OtherActor) return;
 
-	// Aplica daÒo est·ndar de Unreal
+	// Aplica da√±o estandar al actor que entr√≥ en el trigger
 	UGameplayStatics::ApplyDamage(OtherActor, Damage, nullptr, this, nullptr);
 
 	if (bDestroyOnHit)

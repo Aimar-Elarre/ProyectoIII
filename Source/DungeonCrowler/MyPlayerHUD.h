@@ -12,6 +12,12 @@ class DUNGEONCROWLER_API UMyPlayerHUD : public UUserWidget
     GENERATED_BODY()
 
 public:
+
+    UPROPERTY(meta = (BindWidget))
+    UTextBlock* HintText;
+
+    void ShowHint(const FString& Message);
+    void HideHint();
     UPROPERTY(meta = (BindWidget))
     UProgressBar* StaminaBar;
 

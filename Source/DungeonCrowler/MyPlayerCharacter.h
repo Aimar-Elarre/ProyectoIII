@@ -42,12 +42,17 @@ public:
     void Dash();
     void ResetDash();
     void UpdateMovementSpeed();
+    void ShowHintMessage(const FString& Message);
+    void HideHintMessage();
     float CurrentCapsuleHeight;
     void TryPlayFootstep();
     void DropItem();
     void UpdateFootstepAudio(float ForwardValue);
     void StopFootstepAudio();
     void MakeMovementNoise(float Loudness);
+
+    void UnlockDash();
+    bool IsDashUnlocked() const;
 
     // VIDA / RESPAWN
     void Die();
@@ -112,6 +117,7 @@ protected:
     float JumpStrength = 600.f;
 
     bool bIsRunning = false;
+    bool bHasJumped = false;
 
     // CROUCH
     bool bIsCrouching = false;
@@ -158,7 +164,9 @@ protected:
 
     float CurrentDashFOVOffset = 0.f;
 
-    bool bCanDash = true;
+    bool bDashUnlocked = false;
+
+    bool bCanDash = false;
     FTimerHandle DashCooldownHandle;
 
     // STAMINA

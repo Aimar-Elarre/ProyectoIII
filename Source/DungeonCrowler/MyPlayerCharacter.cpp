@@ -127,10 +127,17 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    const bool bOnGround = GetCharacterMovement()->IsMovingOnGround();
+
+    if (bOnGround)
+    {
+        bHasJumped = false;
+    }
+
     FVector HorizontalVelocity = GetVelocity();
     HorizontalVelocity.Z = 0.f;
 
-    if (bIsRunning && (!GetCharacterMovement()->IsMovingOnGround() || HorizontalVelocity.SizeSquared() <= 1.f))
+    if (bIsRunning && (!bOnGround || HorizontalVelocity.SizeSquared() <= 1.f))
     {
         StopRun();
     }
@@ -163,16 +170,15 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
 
     // Crouch suave
     float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
-    float CurrentHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
-    float NewHeight = FMath::FInterpTo(
+    CurrentCapsuleHeight = FMath::FInterpTo(
         CurrentCapsuleHeight,
         TargetHeight,
         DeltaTime,
         CrouchSpeed
     );
 
-    GetCapsuleComponent()->SetCapsuleHalfHeight(NewHeight, true);
+    GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
 
     // FOV dinámico al correr
     if (Camera)
@@ -187,7 +193,7 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         Camera->SetFieldOfView(NewFOV);
     }
 
-    if (!GetCharacterMovement()->IsMovingOnGround() || bIsDead || bIsSliding)
+    if (!bOnGround || bIsDead || bIsSliding)
     {
         StopFootstepAudio();
     }
@@ -299,6 +305,7 @@ void AMyPlayerCharacter::StartJump()
     if (!GetCharacterMovement()->IsMovingOnGround()) return;
 
     Jump();
+    bHasJumped = true;
 
     MakeMovementNoise(1.0f);
 
@@ -401,7 +408,10 @@ void AMyPlayerCharacter::StopSlide()
 
 void AMyPlayerCharacter::Dash()
 {
+    if (!bDashUnlocked) return;
     if (!bCanDash) return;
+    if (!bHasJumped) return;
+    if (GetCharacterMovement()->IsMovingOnGround()) return;
 
     bCanDash = false;
 
@@ -411,6 +421,8 @@ void AMyPlayerCharacter::Dash()
     DashDir.Normalize();
 
     LaunchCharacter(DashDir * DashStrength, true, false);
+
+    CurrentDashFOVOffset = DashFOVBoost;
 
     if (DashSound)
     {
@@ -433,7 +445,10 @@ void AMyPlayerCharacter::Dash()
 }
 void AMyPlayerCharacter::ResetDash()
 {
-    bCanDash = true;
+    if (bDashUnlocked)
+    {
+        bCanDash = true;
+    }
 }
 
 void AMyPlayerCharacter::UpdateMovementSpeed()
@@ -529,6 +544,35 @@ void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
     bHasCheckpoint = true;
 
     UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO EN: %s"), *LastCheckpointLocation.ToString());
+}
+
+void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
+{
+    if (PlayerHUD)
+    {
+        PlayerHUD->ShowHint(Message);
+    }
+}
+
+void AMyPlayerCharacter::HideHintMessage()
+{
+    if (PlayerHUD)
+    {
+        PlayerHUD->HideHint();
+    }
+}
+
+void AMyPlayerCharacter::UnlockDash()
+{
+    bDashUnlocked = true;
+    bCanDash = true;
+
+    ShowHintMessage(TEXT("Dash desbloqueado. Pulsa Q en el aire"));
+}
+
+bool AMyPlayerCharacter::IsDashUnlocked() const
+{
+    return bDashUnlocked;
 }
 
 void AMyPlayerCharacter::RespawnAtCheckpoint()

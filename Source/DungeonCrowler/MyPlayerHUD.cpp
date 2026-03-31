@@ -46,3 +46,21 @@ void UMyPlayerHUD::UpdateCarry(int32 CurrentItems, int32 MaxItems)
         }
     }
 }
+
+void UMyPlayerHUD::ShowHint(const FString& Message)
+{
+    if (HintText)
+    {
+        HintText->SetText(FText::FromString(Message));
+        HintText->SetVisibility(ESlateVisibility::Visible);
+    }
+}
+
+void UMyPlayerHUD::HideHint()
+{
+    if (HintText)
+    {
+        HintText->SetText(FText::GetEmpty());
+        HintText->SetVisibility(ESlateVisibility::Hidden);
+    }
+}

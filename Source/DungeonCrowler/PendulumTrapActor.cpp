@@ -1,56 +1,73 @@
 #include "PendulumTrapActor.h"
-
-#include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Math/UnrealMathUtility.h"
+#include "Kismet/GameplayStatics.h"
 
 APendulumTrapActor::APendulumTrapActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
+	// Crear pivot como nueva raíz
 	Pivot = CreateDefaultSubobject<USceneComponent>(TEXT("Pivot"));
 	SetRootComponent(Pivot);
 
-	if (IsValid(Trigger))
+	// Recolocar el Trigger heredado debajo del Pivot
+	if (Trigger)
 	{
-		Trigger.Get()->SetupAttachment(Pivot);
+		Trigger->SetupAttachment(Pivot);
 	}
 
-	if (IsValid(Trigger))
-	{
-		Mesh.Get()->SetupAttachment(Trigger.Get());
-	}
+	// El Mesh ya cuelga del Trigger en la clase padre
 }
 
 void APendulumTrapActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitialPivotRotation = Pivot->GetRelativeRotation();
-	RunningTime = 0.f;
+	if (Pivot)
+	{
+		InitialPivotRotation = Pivot->GetRelativeRotation();
+	}
+
+	if (SwingSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SwingSound, GetActorLocation());
+	}
 }
 
 void APendulumTrapActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (!Pivot) return;
+
 	RunningTime += DeltaTime;
 
-	// Swing is a sine wave: -1..1, scaled by SwingAngle
-	float Angle = FMath::Sin((RunningTime * SwingSpeed) * 2.f * PI + FMath::DegreesToRadians(PhaseOffsetDegrees)) * SwingAngle;
+	const float PhaseRadians = FMath::DegreesToRadians(PhaseOffsetDegrees);
+	const float Oscillation = FMath::Sin((RunningTime * SwingSpeed * 2.0f * PI) + PhaseRadians);
+	const float CurrentAngle = Oscillation * SwingAngle;
 
-	FRotator NewRot = InitialPivotRotation;
+	FRotator NewRotation = InitialPivotRotation;
+
 	switch (SwingAxis)
 	{
 	case EPendulumAxis::Pitch:
-		NewRot.Pitch += Angle;
+		NewRotation.Pitch += CurrentAngle;
 		break;
+
 	case EPendulumAxis::Yaw:
-		NewRot.Yaw += Angle;
+		NewRotation.Yaw += CurrentAngle;
 		break;
+
 	case EPendulumAxis::Roll:
-		NewRot.Roll += Angle;
+		NewRotation.Roll += CurrentAngle;
+		break;
+
+	default:
 		break;
 	}
 
-	Pivot->SetRelativeRotation(NewRot);
+	Pivot->SetRelativeRotation(NewRotation);
 }

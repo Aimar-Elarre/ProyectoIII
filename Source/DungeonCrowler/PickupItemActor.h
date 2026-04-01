@@ -6,27 +6,28 @@
 
 class UBoxComponent;
 class UStaticMeshComponent;
+class USoundBase;
 
 UCLASS()
 class DUNGEONCROWLER_API APickupItemActor : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	APickupItemActor();
 
 protected:
-	virtual void BeginPlay() override;
-
-	// 🔥 TRIGGER (HEREDADO EN BP)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere)
 	UBoxComponent* Trigger;
 
-	// 🔥 MESH (VISIBLE EN EL MUNDO)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* Mesh;
 
-	// 🔥 EVENTO DE OVERLAP
+	UPROPERTY(EditAnywhere)
+	USoundBase* PickupSound;
+
+	virtual void BeginPlay() override;
+
 	UFUNCTION()
 	void OnOverlapBegin(
 		UPrimitiveComponent* OverlappedComp,

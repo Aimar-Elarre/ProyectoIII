@@ -6,6 +6,7 @@
 
 class UBoxComponent;
 class UStaticMeshComponent;
+class USoundBase;
 
 UCLASS()
 class DUNGEONCROWLER_API ATrapDamageActor : public AActor
@@ -16,20 +17,27 @@ public:
 	ATrapDamageActor();
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TObjectPtr<UBoxComponent> Trigger;
+	UPROPERTY(VisibleAnywhere)
+	UBoxComponent* Trigger;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TObjectPtr<UStaticMeshComponent> Mesh;
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* Mesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap")
+	UPROPERTY(EditAnywhere)
 	float Damage = 25.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap")
-	bool bDestroyOnHit = false;
+	UPROPERTY(EditAnywhere)
+	USoundBase* TrapSound;
+
+	virtual void BeginPlay() override;
 
 	UFUNCTION()
-	void OnTriggerBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
-		bool bFromSweep, const FHitResult& SweepResult);
+	void OnOverlapBegin(
+		UPrimitiveComponent* OverlappedComp,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+	);
 };

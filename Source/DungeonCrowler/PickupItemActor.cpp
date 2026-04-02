@@ -2,10 +2,13 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "MyPlayerCharacter.h"
 
 APickupItemActor::APickupItemActor()
 {
+	PrimaryActorTick.bCanEverTick = false;
+
 	Trigger = CreateDefaultSubobject<UBoxComponent>(TEXT("Trigger"));
 	SetRootComponent(Trigger);
 
@@ -19,6 +22,7 @@ APickupItemActor::APickupItemActor()
 void APickupItemActor::BeginPlay()
 {
 	Super::BeginPlay();
+
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &APickupItemActor::OnOverlapBegin);
 }
 
@@ -31,17 +35,19 @@ void APickupItemActor::OnOverlapBegin(
 	const FHitResult& SweepResult
 )
 {
+	if (!OtherActor) return;
+
 	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
+	if (!Player) return;
 
-	if (Player)
+	Player->AddCarriedItem(1);
+
+	UE_LOG(LogTemp, Warning, TEXT("Objeto recogido. Total: %d"), Player->GetItemsCarried());
+
+	if (PickupSound)
 	{
-		Player->AddCarriedItem(1);
-
-		if (PickupSound)
-		{
-			UGameplayStatics::PlaySoundAtLocation(this, PickupSound, GetActorLocation());
-		}
-
-		Destroy();
+		UGameplayStatics::PlaySoundAtLocation(this, PickupSound, GetActorLocation());
 	}
+
+	Destroy();
 }

@@ -17,16 +17,19 @@ public:
 	APickupItemActor();
 
 protected:
-	UPROPERTY(VisibleAnywhere)
+	virtual void BeginPlay() override;
+
+	// Trigger heredado en el BP
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickup")
 	UBoxComponent* Trigger;
 
-	UPROPERTY(VisibleAnywhere)
+	// Mesh visible del objeto
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickup")
 	UStaticMeshComponent* Mesh;
 
-	UPROPERTY(EditAnywhere)
-	USoundBase* PickupSound;
-
-	virtual void BeginPlay() override;
+	// Sonido al recoger
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
+	USoundBase* PickupSound = nullptr;
 
 	UFUNCTION()
 	void OnOverlapBegin(

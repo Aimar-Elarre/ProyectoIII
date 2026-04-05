@@ -64,146 +64,6 @@ void AMyPlayerCharacter::StopJump()
 
 void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 {
-    CurrentHealth -= DamageAmount;
-
-    if (CurrentHealth <= 0)
-    {
-        Die();
-    }
-}
-
-void AMyPlayerCharacter::Die()
-{
-    UE_LOG(LogTemp, Warning, TEXT("Jugador muerto"));
-}
-
-void AMyPlayerCharacter::DropItem()
-{
-    if (ItemsCarried <= 0 || !PickupItemClass) return;
-
-    FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f;
-    GetWorld()->SpawnActor<APickupItemActor>(PickupItemClass, SpawnLocation, FRotator::ZeroRotator);
-
-    ItemsCarried--;
-    UpdateMovementSpeed();
-}
-
-void AMyPlayerCharacter::AddCarriedItem(int32 Amount)
-{
-    ItemsCarried += Amount;
-    if (ItemsCarried < 0)
-    {
-        ItemsCarried = 0;
-    }
-
-    UpdateMovementSpeed();
-}
-
-int32 AMyPlayerCharacter::GetItemsCarried() const
-{
-    return ItemsCarried;
-}
-
-float AMyPlayerCharacter::GetCurrentHealthValue() const
-{
-    return CurrentHealth;
-}
-
-bool AMyPlayerCharacter::IsDashUnlocked() const
-{
-    return bDashUnlocked;
-}
-
-void AMyPlayerCharacter::UnlockDash()
-{
-    bDashUnlocked = true;
-    UE_LOG(LogTemp, Warning, TEXT("Dash desbloqueado"));
-}
-
-void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
-{
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, Message);
-    }
-}
-
-void AMyPlayerCharacter::HideHintMessage()
-{
-    if (GEngine)
-    {
-        GEngine->ClearOnScreenDebugMessages();
-    }
-}
-
-void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
-{
-    LastCheckpointLocation = NewLocation;
-    bHasCheckpoint = true;
-    UE_LOG(LogTemp, Warning, TEXT("Checkpoint guardado"));
-}
-
-void AMyPlayerCharacter::RespawnAtCheckpoint()
-{
-}
-
-void AMyPlayerCharacter::StartRun()
-{
-}
-
-void AMyPlayerCharacter::StopRun()
-{
-}
-
-void AMyPlayerCharacter::Turn(float Value)
-{
-    AddControllerYawInput(Value);
-}
-
-void AMyPlayerCharacter::LookUp(float Value)
-{
-    AddControllerPitchInput(Value);
-}
-
-void AMyPlayerCharacter::StartCrouch()
-{
-}
-
-void AMyPlayerCharacter::StopCrouch()
-{
-}
-
-void AMyPlayerCharacter::StartSlide()
-{
-}
-
-void AMyPlayerCharacter::StopSlide()
-{
-}
-
-void AMyPlayerCharacter::UpdateMovementSpeed()
-{
-    float Multiplier = 1.0f - (ItemsCarried * SpeedPenaltyPerItem);
-    Multiplier = FMath::Clamp(Multiplier, MinSpeedMultiplier, 1.0f);
-
-    GetCharacterMovement()->MaxWalkSpeed = 600.f * Multiplier;
-}
-
-float AMyPlayerCharacter::GetStaminaPercent() const
-{
-<<<<<<< Updated upstream
-    return 1.0f;
-=======
-    if (MaxStamina <= 0.f)
-    {
-        return 0.f;
-    }
-
-    return CurrentStamina / MaxStamina;
-}
-
-void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
-{
     if (bIsDead) return;
 
     CurrentHealth -= DamageAmount;
@@ -257,75 +117,6 @@ void AMyPlayerCharacter::KillPlayer()
     Die();
 }
 
-void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
-{
-    LastCheckpointLocation = NewLocation;
-    bHasCheckpoint = true;
-
-    UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO EN: %s"), *LastCheckpointLocation.ToString());
-}
-
-void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
-{
-    if (PlayerHUD)
-    {
-        PlayerHUD->ShowHint(Message);
-    }
-}
-
-void AMyPlayerCharacter::HideHintMessage()
-{
-    if (PlayerHUD)
-    {
-        PlayerHUD->HideHint();
-    }
-}
-
-void AMyPlayerCharacter::UnlockDash()
-{
-    bDashUnlocked = true;
-    bCanDash = true;
-
-    ShowHintMessage(TEXT("Dash desbloqueado. Pulsa Q en el aire"));
-}
-
-bool AMyPlayerCharacter::IsDashUnlocked() const
-{
-    return bDashUnlocked;
-}
-
-void AMyPlayerCharacter::RespawnAtCheckpoint()
-{
-    UE_LOG(LogTemp, Warning, TEXT("RESPAWN CHECKPOINT FLAG: %d"), bHasCheckpoint);
-
-    if (!bHasCheckpoint)
-    {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(
-                -1,
-                3.f,
-                FColor::Red,
-                TEXT("NO HAY CHECKPOINT GUARDADO")
-            );
-        }
-        return;
-    }
-
-    SetActorLocation(LastCheckpointLocation);
-
-    CurrentHealth = MaxHealth;
-    bIsDead = false;
-
-    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-    UpdateMovementSpeed();
-
-    if (APlayerController* PC = Cast<APlayerController>(GetController()))
-    {
-        EnableInput(PC);
-    }
-}
-
 void AMyPlayerCharacter::DropItem()
 {
     if (ItemsCarried <= 0)
@@ -373,23 +164,153 @@ void AMyPlayerCharacter::DropItem()
             FString::Printf(TEXT("Objeto soltado. Quedan: %d"), ItemsCarried)
         );
     }
-    void AMyPlayerCharacter::AddCarriedItem(int32 Amount)
-    {
-        ItemsCarried += Amount;
+}
 
-        if (ItemsCarried < 0)
+void AMyPlayerCharacter::AddCarriedItem(int32 Amount)
+{
+    ItemsCarried += Amount;
+
+    if (ItemsCarried < 0)
+    {
+        ItemsCarried = 0;
+    }
+
+    UpdateMovementSpeed();
+
+    UE_LOG(LogTemp, Warning, TEXT("Items ahora: %d"), ItemsCarried);
+}
+
+int32 AMyPlayerCharacter::GetItemsCarried() const
+{
+    return ItemsCarried;
+}
+
+float AMyPlayerCharacter::GetCurrentHealthValue() const
+{
+    return CurrentHealth;
+}
+
+bool AMyPlayerCharacter::IsDashUnlocked() const
+{
+    return bDashUnlocked;
+}
+
+void AMyPlayerCharacter::UnlockDash()
+{
+    bDashUnlocked = true;
+    bCanDash = true;
+
+    ShowHintMessage(TEXT("Dash desbloqueado. Pulsa Q en el aire"));
+}
+
+void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
+{
+    if (PlayerHUD)
+    {
+        PlayerHUD->ShowHint(Message);
+    }
+}
+
+void AMyPlayerCharacter::HideHintMessage()
+{
+    if (PlayerHUD)
+    {
+        PlayerHUD->HideHint();
+    }
+}
+
+void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
+{
+    LastCheckpointLocation = NewLocation;
+    bHasCheckpoint = true;
+
+    UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO EN: %s"), *LastCheckpointLocation.ToString());
+}
+
+void AMyPlayerCharacter::RespawnAtCheckpoint()
+{
+    UE_LOG(LogTemp, Warning, TEXT("RESPAWN CHECKPOINT FLAG: %d"), bHasCheckpoint);
+
+    if (!bHasCheckpoint)
+    {
+        if (GEngine)
         {
-            ItemsCarried = 0;
+            GEngine->AddOnScreenDebugMessage(
+                -1,
+                3.f,
+                FColor::Red,
+                TEXT("NO HAY CHECKPOINT GUARDADO")
+            );
         }
-
-        UpdateMovementSpeed();
-
-        UE_LOG(LogTemp, Warning, TEXT("Items ahora: %d"), ItemsCarried);
+        return;
     }
 
-    int32 AMyPlayerCharacter::GetItemsCarried() const
+    SetActorLocation(LastCheckpointLocation);
+
+    CurrentHealth = MaxHealth;
+    bIsDead = false;
+
+    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    UpdateMovementSpeed();
+
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
-        return ItemsCarried;
+        EnableInput(PC);
     }
->>>>>>> Stashed changes
+}
+
+void AMyPlayerCharacter::StartRun()
+{
+}
+
+void AMyPlayerCharacter::StopRun()
+{
+}
+
+void AMyPlayerCharacter::Turn(float Value)
+{
+    AddControllerYawInput(Value * MouseSensitivity);
+}
+
+void AMyPlayerCharacter::LookUp(float Value)
+{
+    AddControllerPitchInput(Value * MouseSensitivity);
+}
+
+void AMyPlayerCharacter::StartCrouch()
+{
+}
+
+void AMyPlayerCharacter::StopCrouch()
+{
+}
+
+void AMyPlayerCharacter::StartSlide()
+{
+}
+
+void AMyPlayerCharacter::StopSlide()
+{
+}
+
+void AMyPlayerCharacter::UpdateMovementSpeed()
+{
+    float Multiplier = 1.0f - (ItemsCarried * SpeedPenaltyPerItem);
+    Multiplier = FMath::Clamp(Multiplier, MinSpeedMultiplier, 1.0f);
+
+    GetCharacterMovement()->MaxWalkSpeed = 600.f * Multiplier;
+}
+
+float AMyPlayerCharacter::GetStaminaPercent() const
+{
+    if (MaxStamina <= 0.f)
+    {
+        return 0.f;
+    }
+
+    return CurrentStamina / MaxStamina;
+}
+
+void AMyPlayerCharacter::Dash()
+{
 }

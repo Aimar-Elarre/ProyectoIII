@@ -72,7 +72,6 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Inventory")
     int32 GetItemsCarried() const;
-    float GetCurrentHealthValue() const;
 
     UFUNCTION(BlueprintPure, Category = "Stats")
     float GetCurrentHealthValue() const;
@@ -150,12 +149,16 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
     bool bIsRunning = false;
 
+    // SENSIBILIDAD
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouse")
+    float MouseSensitivity = 1.f;
+
     // STAMINA
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
     float MaxStamina = 100.f;
 
-    UPROPERTY(EditAnywhere, Category = "Inventory")
-    float MinSpeedMultiplier = 0.4f;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
+    float CurrentStamina = 100.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
     float StaminaDrainRate = 30.f;

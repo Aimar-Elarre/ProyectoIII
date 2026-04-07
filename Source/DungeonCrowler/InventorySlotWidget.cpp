@@ -49,6 +49,5 @@ void UInventorySlotWidget::OnDropClicked()
 {
     if (!InventoryComp || !CachedEntry.ItemData) return;
 
-    // Por ahora solo log — aquí llamaremos al drop real en el siguiente paso
-    UE_LOG(LogTemp, Warning, TEXT("Drop clicked: %s"), *CachedEntry.ItemData->DisplayName.ToString());
+    InventoryComp->RemoveItem(CachedEntry.ItemData, 1);
 }

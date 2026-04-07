@@ -6,6 +6,8 @@
 #include "Engine/Engine.h"
 #include "TimerManager.h"
 #include "GameFramework/PlayerController.h"
+#include "InventoryWidget.h"
+#include "ItemData.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -18,6 +20,9 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     Camera->SetupAttachment(SpringArm);
 
     GetCharacterMovement()->MaxWalkSpeed = 600.f;
+
+    // Inventario nuevo
+    InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 void AMyPlayerCharacter::BeginPlay()
@@ -40,6 +45,7 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyPlayerCharacter::StartJump);
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+    PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
 }
 
 void AMyPlayerCharacter::MoveForward(float Value)
@@ -92,12 +98,7 @@ void AMyPlayerCharacter::Die()
 
     if (GEngine)
     {
-        GEngine->AddOnScreenDebugMessage(
-            -1,
-            2.f,
-            FColor::Red,
-            TEXT("ESTAS MUERTO")
-        );
+        GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("ESTAS MUERTO"));
     }
 
     GetWorldTimerManager().SetTimer(
@@ -119,17 +120,17 @@ void AMyPlayerCharacter::KillPlayer()
 
 void AMyPlayerCharacter::DropItem()
 {
-    if (ItemsCarried <= 0)
+    if (!InventoryComponent) return;
+
+    TArray<FInventoryEntry> Items = InventoryComponent->GetItemsAsArray();
+    if (Items.Num() == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("No hay objetos para soltar"));
+        UE_LOG(LogTemp, Warning, TEXT("Inventario vacío"));
         return;
     }
 
-    if (!PickupItemClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("PickupItemClass no está asignado en el personaje"));
-        return;
-    }
+    const FInventoryEntry& Entry = Items[0];
+    if (!Entry.ItemData || !Entry.ItemData->PickupActorClass) return;
 
     FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
     FRotator SpawnRotation = FRotator::ZeroRotator;
@@ -137,46 +138,25 @@ void AMyPlayerCharacter::DropItem()
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    APickupItemActor* SpawnedPickup = GetWorld()->SpawnActor<APickupItemActor>(
-        PickupItemClass,
+    GetWorld()->SpawnActor<APickupItemActor>(
+        Entry.ItemData->PickupActorClass,
         SpawnLocation,
         SpawnRotation,
         SpawnParams
     );
 
-    if (!SpawnedPickup)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("No se pudo spawnear el pickup"));
-        return;
-    }
+    // Ahora sí elimina del inventario
+    InventoryComponent->RemoveItem(Entry.ItemData, 1);
 
-    ItemsCarried--;
-    UpdateMovementSpeed();
-
-    UE_LOG(LogTemp, Warning, TEXT("Objeto soltado. ItemsCarried = %d"), ItemsCarried);
-
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(
-            -1,
-            2.f,
-            FColor::Yellow,
-            FString::Printf(TEXT("Objeto soltado. Quedan: %d"), ItemsCarried)
-        );
-    }
+    UE_LOG(LogTemp, Warning, TEXT("Objeto soltado: %s"), *Entry.ItemData->DisplayName.ToString());
 }
+
 
 void AMyPlayerCharacter::AddCarriedItem(int32 Amount)
 {
     ItemsCarried += Amount;
-
-    if (ItemsCarried < 0)
-    {
-        ItemsCarried = 0;
-    }
-
+    if (ItemsCarried < 0) ItemsCarried = 0;
     UpdateMovementSpeed();
-
     UE_LOG(LogTemp, Warning, TEXT("Items ahora: %d"), ItemsCarried);
 }
 
@@ -199,31 +179,23 @@ void AMyPlayerCharacter::UnlockDash()
 {
     bDashUnlocked = true;
     bCanDash = true;
-
     ShowHintMessage(TEXT("Dash desbloqueado. Pulsa Q en el aire"));
 }
 
 void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
 {
-    if (PlayerHUD)
-    {
-        PlayerHUD->ShowHint(Message);
-    }
+    if (PlayerHUD) PlayerHUD->ShowHint(Message);
 }
 
 void AMyPlayerCharacter::HideHintMessage()
 {
-    if (PlayerHUD)
-    {
-        PlayerHUD->HideHint();
-    }
+    if (PlayerHUD) PlayerHUD->HideHint();
 }
 
 void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
 {
     LastCheckpointLocation = NewLocation;
     bHasCheckpoint = true;
-
     UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO EN: %s"), *LastCheckpointLocation.ToString());
 }
 
@@ -235,18 +207,12 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     {
         if (GEngine)
         {
-            GEngine->AddOnScreenDebugMessage(
-                -1,
-                3.f,
-                FColor::Red,
-                TEXT("NO HAY CHECKPOINT GUARDADO")
-            );
+            GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("NO HAY CHECKPOINT GUARDADO"));
         }
         return;
     }
 
     SetActorLocation(LastCheckpointLocation);
-
     CurrentHealth = MaxHealth;
     bIsDead = false;
 
@@ -259,13 +225,13 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     }
 }
 
-void AMyPlayerCharacter::StartRun()
-{
-}
-
-void AMyPlayerCharacter::StopRun()
-{
-}
+void AMyPlayerCharacter::StartRun() {}
+void AMyPlayerCharacter::StopRun() {}
+void AMyPlayerCharacter::StartCrouch() {}
+void AMyPlayerCharacter::StopCrouch() {}
+void AMyPlayerCharacter::StartSlide() {}
+void AMyPlayerCharacter::StopSlide() {}
+void AMyPlayerCharacter::Dash() {}
 
 void AMyPlayerCharacter::Turn(float Value)
 {
@@ -277,40 +243,77 @@ void AMyPlayerCharacter::LookUp(float Value)
     AddControllerPitchInput(Value * MouseSensitivity);
 }
 
-void AMyPlayerCharacter::StartCrouch()
-{
-}
-
-void AMyPlayerCharacter::StopCrouch()
-{
-}
-
-void AMyPlayerCharacter::StartSlide()
-{
-}
-
-void AMyPlayerCharacter::StopSlide()
-{
-}
-
 void AMyPlayerCharacter::UpdateMovementSpeed()
 {
     float Multiplier = 1.0f - (ItemsCarried * SpeedPenaltyPerItem);
     Multiplier = FMath::Clamp(Multiplier, MinSpeedMultiplier, 1.0f);
-
     GetCharacterMovement()->MaxWalkSpeed = 600.f * Multiplier;
 }
 
 float AMyPlayerCharacter::GetStaminaPercent() const
 {
-    if (MaxStamina <= 0.f)
-    {
-        return 0.f;
-    }
-
+    if (MaxStamina <= 0.f) return 0.f;
     return CurrentStamina / MaxStamina;
 }
 
-void AMyPlayerCharacter::Dash()
+// =======================
+// INVENTARIO (TAB)
+// =======================
+
+void AMyPlayerCharacter::Input_Inventory_Toggle()
 {
+    if (bInventoryOpen) HideInventory();
+    else ShowInventory();
+}
+
+void AMyPlayerCharacter::ShowInventory()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC) return;
+
+    if (!InventoryWidgetInstance && InventoryWidgetClass)
+    {
+        InventoryWidgetInstance = CreateWidget<UUserWidget>(PC, InventoryWidgetClass);
+
+        if (UInventoryWidget* InvWidget = Cast<UInventoryWidget>(InventoryWidgetInstance))
+        {
+            InvWidget->InitInventory(InventoryComponent);
+        }
+    }
+
+    if (InventoryWidgetInstance && !InventoryWidgetInstance->IsInViewport())
+    {
+        InventoryWidgetInstance->AddToViewport(10);
+    }
+
+    bInventoryOpen = true;
+
+    FInputModeGameAndUI Mode;
+    Mode.SetHideCursorDuringCapture(false);
+    Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+    if (InventoryWidgetInstance)
+    {
+        Mode.SetWidgetToFocus(InventoryWidgetInstance->TakeWidget());
+    }
+
+    PC->SetInputMode(Mode);
+    PC->bShowMouseCursor = true;
+}
+
+void AMyPlayerCharacter::HideInventory()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC) return;
+
+    if (InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport())
+    {
+        InventoryWidgetInstance->RemoveFromParent();
+    }
+
+    bInventoryOpen = false;
+
+    FInputModeGameOnly Mode;
+    PC->SetInputMode(Mode);
+    PC->bShowMouseCursor = false;
 }

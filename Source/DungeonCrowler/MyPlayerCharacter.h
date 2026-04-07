@@ -6,9 +6,11 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "MyPlayerHUD.h"
+#include "InventoryComponent.h"
 #include "MyPlayerCharacter.generated.h"
 
 class APickupItemActor;
+class UInventoryWidget;
 
 UCLASS()
 class DUNGEONCROWLER_API AMyPlayerCharacter : public ACharacter
@@ -77,6 +79,10 @@ public:
     float GetCurrentHealthValue() const;
 
     void UpdateMovementSpeed();
+
+    // INVENTARIO NUEVO
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+    TObjectPtr<UInventoryComponent> InventoryComponent;
 
     // SLIDE
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slide")
@@ -176,7 +182,7 @@ public:
     UPROPERTY(VisibleAnywhere)
     float CurrentHealth = 0.f;
 
-    // INVENTARIO / PESO
+    // INVENTARIO / PESO (legacy)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     int32 ItemsCarried = 4;
 
@@ -202,4 +208,17 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     UCameraComponent* Camera = nullptr;
+
+private:
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UUserWidget> InventoryWidgetClass;
+
+    UPROPERTY()
+    TObjectPtr<UUserWidget> InventoryWidgetInstance = nullptr;
+
+    bool bInventoryOpen = false;
+
+    void Input_Inventory_Toggle();
+    void ShowInventory();
+    void HideInventory();
 };

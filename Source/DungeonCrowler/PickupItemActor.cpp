@@ -4,6 +4,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "MyPlayerCharacter.h"
+#include "InventoryComponent.h"
+#include "ItemData.h"
 
 APickupItemActor::APickupItemActor()
 {
@@ -22,7 +24,6 @@ APickupItemActor::APickupItemActor()
 void APickupItemActor::BeginPlay()
 {
 	Super::BeginPlay();
-
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &APickupItemActor::OnOverlapBegin);
 }
 
@@ -39,6 +40,16 @@ void APickupItemActor::OnOverlapBegin(
 
 	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
 	if (!Player) return;
+
+	if (ItemData && Player->InventoryComponent)
+	{
+		bool bAdded = Player->InventoryComponent->AddItem(ItemData, 1);
+		if (!bAdded)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No se pudo añadir al inventario (peso máximo?)"));
+			return;
+		}
+	}
 
 	Player->AddCarriedItem(1);
 

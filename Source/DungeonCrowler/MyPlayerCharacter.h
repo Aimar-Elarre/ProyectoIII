@@ -50,7 +50,7 @@ public:
     // DASH
     void Dash();
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash")
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Dash")
     bool bDashUnlocked = false;
 
     UFUNCTION(BlueprintCallable, Category = "Dash")

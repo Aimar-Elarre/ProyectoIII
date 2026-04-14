@@ -17,6 +17,12 @@ class DUNGEONCROWLER_API APickupItemActor : public AActor
 public:
     APickupItemActor();
 
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    void SetItemData(const UItemData* NewItemData);
+
+    UFUNCTION(BlueprintPure, Category = "Inventory")
+    const UItemData* GetItemData() const;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -29,9 +35,8 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
     USoundBase* PickupSound = nullptr;
 
-    
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TObjectPtr<UItemData> ItemData = nullptr;
+    TObjectPtr<const UItemData> ItemData = nullptr;
 
     UFUNCTION()
     void OnOverlapBegin(

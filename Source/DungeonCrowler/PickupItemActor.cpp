@@ -21,6 +21,16 @@ APickupItemActor::APickupItemActor()
 	Mesh->SetupAttachment(Trigger);
 }
 
+void APickupItemActor::SetItemData(const UItemData* NewItemData)
+{
+	ItemData = NewItemData;
+}
+
+const UItemData* APickupItemActor::GetItemData() const
+{
+	return ItemData;
+}
+
 void APickupItemActor::BeginPlay()
 {
 	Super::BeginPlay();

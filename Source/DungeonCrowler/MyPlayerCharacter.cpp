@@ -200,7 +200,10 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
-    PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
+    FInputActionBinding& InventoryBinding =
+        PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
+
+    InventoryBinding.bExecuteWhenPaused = true;
 }
 
 void AMyPlayerCharacter::MoveForward(float Value)
@@ -713,6 +716,8 @@ void AMyPlayerCharacter::ShowInventory()
 
     bInventoryOpen = true;
 
+    UGameplayStatics::SetGamePaused(GetWorld(), true);
+
     FInputModeGameAndUI Mode;
     Mode.SetHideCursorDuringCapture(false);
     Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -725,7 +730,6 @@ void AMyPlayerCharacter::ShowInventory()
     PC->SetInputMode(Mode);
     PC->bShowMouseCursor = true;
 }
-
 void AMyPlayerCharacter::HideInventory()
 {
     APlayerController* PC = Cast<APlayerController>(GetController());
@@ -737,6 +741,8 @@ void AMyPlayerCharacter::HideInventory()
     }
 
     bInventoryOpen = false;
+
+    UGameplayStatics::SetGamePaused(GetWorld(), false);
 
     FInputModeGameOnly Mode;
     PC->SetInputMode(Mode);

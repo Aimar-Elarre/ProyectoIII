@@ -16,14 +16,12 @@ class DUNGEONCROWLER_API UInventorySlotWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
-    // Llama a esto para inicializar el slot con los datos del item
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     void InitSlot(const FInventoryEntry& Entry, UInventoryComponent* InInventoryComp);
 
 protected:
     virtual void NativeConstruct() override;
 
-    // Estos nombres DEBEN coincidir exactamente con los del WBP
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UImage> ItemIcon;
 
@@ -31,10 +29,10 @@ protected:
     TObjectPtr<UTextBlock> ItemNameText;
 
     UPROPERTY(meta = (BindWidget))
-    TObjectPtr<UTextBlock> QuantityText;
+    TObjectPtr<UTextBlock> ItemInfoText;
 
     UPROPERTY(meta = (BindWidget))
-    TObjectPtr<UTextBlock> WeightText;
+    TObjectPtr<UTextBlock> QuantityText;
 
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UButton> DropButton;

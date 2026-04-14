@@ -4,6 +4,7 @@
 #include "Components/TextBlock.h"
 #include "InventoryComponent.h"
 #include "InventorySlotWidget.h"
+#include "Components/ProgressBar.h"
 
 void UInventoryWidget::NativeConstruct()
 {
@@ -39,12 +40,20 @@ void UInventoryWidget::RefreshInventory()
 
     if (CurrentWeightText)
     {
-        CurrentWeightText->SetText(FText::AsNumber(InventoryComp->GetCurrentWeight()));
+        CurrentWeightText->SetText(
+            FText::FromString(FString::Printf(TEXT("%.1f"), InventoryComp->GetCurrentWeight()))
+        );
     }
 
     if (MaxWeightText)
     {
-        MaxWeightText->SetText(FText::AsNumber(InventoryComp->MaxWeight));
+        MaxWeightText->SetText(
+            FText::FromString(FString::Printf(TEXT("%.1f"), InventoryComp->MaxWeight))
+        );
+    }
+    if (WeightBar && InventoryComp->MaxWeight > 0.f)
+    {
+        WeightBar->SetPercent(InventoryComp->GetCurrentWeight() / InventoryComp->MaxWeight);
     }
 }
 

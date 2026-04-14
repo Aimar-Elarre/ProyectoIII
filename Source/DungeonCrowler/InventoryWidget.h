@@ -8,6 +8,7 @@ class UVerticalBox;
 class UTextBlock;
 class UInventoryComponent;
 class UInventorySlotWidget;
+class UProgressBar;
 
 UCLASS()
 class DUNGEONCROWLER_API UInventoryWidget : public UUserWidget
@@ -25,6 +26,9 @@ public:
 protected:
     virtual void NativeConstruct() override;
 
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UProgressBar> WeightBar;
     // Nombres deben coincidir con el WBP
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UVerticalBox> ItemList;

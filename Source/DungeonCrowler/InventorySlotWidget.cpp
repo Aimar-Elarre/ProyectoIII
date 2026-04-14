@@ -21,7 +21,10 @@ void UInventorySlotWidget::InitSlot(const FInventoryEntry& Entry, UInventoryComp
     CachedEntry = Entry;
     InventoryComp = InInventoryComp;
 
-    if (!Entry.ItemData) return;
+    if (!Entry.ItemData)
+    {
+        return;
+    }
 
     if (ItemNameText)
     {
@@ -30,13 +33,24 @@ void UInventorySlotWidget::InitSlot(const FInventoryEntry& Entry, UInventoryComp
 
     if (QuantityText)
     {
-        QuantityText->SetText(FText::AsNumber(Entry.Quantity));
+        QuantityText->SetText(
+            FText::FromString(FString::Printf(TEXT("x%d"), Entry.Quantity))
+        );
     }
 
-    if (WeightText)
+    if (ItemInfoText)
     {
         const float TotalWeight = Entry.Quantity * Entry.ItemData->WeightPerUnit;
-        WeightText->SetText(FText::AsNumber(TotalWeight));
+
+        ItemInfoText->SetText(
+            FText::FromString(
+                FString::Printf(
+                    TEXT("Peso/u: %.1f   Total: %.1f"),
+                    Entry.ItemData->WeightPerUnit,
+                    TotalWeight
+                )
+            )
+        );
     }
 
     if (ItemIcon && Entry.ItemData->Icon)
@@ -47,7 +61,10 @@ void UInventorySlotWidget::InitSlot(const FInventoryEntry& Entry, UInventoryComp
 
 void UInventorySlotWidget::OnDropClicked()
 {
-    if (!InventoryComp || !CachedEntry.ItemData) return;
+    if (!InventoryComp || !CachedEntry.ItemData)
+    {
+        return;
+    }
 
     InventoryComp->RemoveItem(CachedEntry.ItemData, 1);
 }

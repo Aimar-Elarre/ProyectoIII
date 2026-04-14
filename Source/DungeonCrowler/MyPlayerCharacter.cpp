@@ -587,6 +587,7 @@ void AMyPlayerCharacter::DropItem()
     const FInventoryEntry& Entry = Items[0];
     if (!Entry.ItemData || !Entry.ItemData->PickupActorClass)
     {
+        UE_LOG(LogTemp, Warning, TEXT("ItemData o PickupActorClass inválido"));
         return;
     }
 
@@ -608,6 +609,8 @@ void AMyPlayerCharacter::DropItem()
         UE_LOG(LogTemp, Warning, TEXT("No se pudo spawnear el pickup"));
         return;
     }
+
+    SpawnedPickup->SetItemData(Entry.ItemData);
 
     InventoryComponent->RemoveItem(Entry.ItemData, 1);
     RefreshLegacyCarryFromInventory();

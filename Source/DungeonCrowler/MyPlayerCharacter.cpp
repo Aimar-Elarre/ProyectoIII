@@ -679,6 +679,23 @@ float AMyPlayerCharacter::GetStaminaPercent() const
     return CurrentStamina / MaxStamina;
 }
 
+// ============================
+// DINERO / MONEY
+// ============================
+
+void AMyPlayerCharacter::AddMoney(float Amount)
+{
+    if (Amount <= 0.f) return;
+
+    CurrentMoney += Amount;
+    UE_LOG(LogTemp, Warning, TEXT("Dinero añadido: +%.2f | Total: %.2f"), Amount, CurrentMoney);
+}
+
+float AMyPlayerCharacter::GetCurrentMoney() const
+{
+    return CurrentMoney;
+}
+
 void AMyPlayerCharacter::Input_Inventory_Toggle()
 {
     if (bInventoryOpen)

@@ -63,6 +63,12 @@ void APickupItemActor::OnOverlapBegin(
 
 	Player->AddCarriedItem(1);
 
+	// Añadir dinero del item al jugador
+	if (ItemData && ItemData->MoneyValue > 0.f)
+	{
+		Player->AddMoney(ItemData->MoneyValue);
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("Objeto recogido. Total: %d"), Player->GetItemsCarried());
 
 	if (PickupSound)

@@ -147,7 +147,17 @@ public:
     float CurrentDashFOVOffset = 0.f;
     FTimerHandle DashCooldownHandle;
 
-    // Crouch
+// DINERO / MONEY
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	float CurrentMoney = 0.0f;
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddMoney(float Amount);
+
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	float GetCurrentMoney() const;
+
+	// Crouch
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crouch")
     bool bIsCrouching = false;
 

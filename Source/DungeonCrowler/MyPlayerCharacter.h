@@ -80,6 +80,18 @@ public:
     void DropItem();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool DropInventoryItem(const UItemData* ItemData, int32 Quantity = 1);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+    float DropForwardOffset = 120.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+    float DropUpOffset = 40.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+    float DropImpulseStrength = 800.f;
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
     void AddCarriedItem(int32 Amount = 1);
 
     UFUNCTION(BlueprintPure, Category = "Inventory")

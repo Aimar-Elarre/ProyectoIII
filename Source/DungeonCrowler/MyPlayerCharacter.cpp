@@ -585,38 +585,65 @@ void AMyPlayerCharacter::DropItem()
     }
 
     const FInventoryEntry& Entry = Items[0];
-    if (!Entry.ItemData || !Entry.ItemData->PickupActorClass)
+    if (!Entry.ItemData) return;
+
+    if (!DropInventoryItem(Entry.ItemData, 1))
     {
-        UE_LOG(LogTemp, Warning, TEXT("ItemData o PickupActorClass inválido"));
-        return;
+        UE_LOG(LogTemp, Warning, TEXT("No se pudo soltar el primer objeto del inventario"));
+    }
+}
+
+bool AMyPlayerCharacter::DropInventoryItem(const UItemData* ItemData, int32 Quantity)
+{
+    if (!InventoryComponent || !ItemData || Quantity <= 0)
+    {
+        return false;
     }
 
-    const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
-    const FRotator SpawnRotation = FRotator::ZeroRotator;
+    if (!ItemData->PickupActorClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No se ha definido PickupActorClass en el ItemData %s"), *ItemData->GetName());
+        return false;
+    }
+
+    if (!InventoryComponent->RemoveItem(ItemData, Quantity))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No se pudo soltar: no hay suficientes unidades en el inventario"));
+        return false;
+    }
+
+    FVector SpawnLocation = Camera->GetComponentLocation() + Camera->GetForwardVector() * DropForwardOffset + FVector(0.f, 0.f, DropUpOffset);
+    FRotator SpawnRotation = Camera->GetComponentRotation();
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    APickupItemActor* SpawnedPickup = GetWorld()->SpawnActor<APickupItemActor>(
-        Entry.ItemData->PickupActorClass,
+    APickupItemActor* DroppedActor = GetWorld()->SpawnActor<APickupItemActor>(
+        ItemData->PickupActorClass,
         SpawnLocation,
         SpawnRotation,
         SpawnParams
     );
 
-    if (!SpawnedPickup)
+    if (!DroppedActor)
     {
-        UE_LOG(LogTemp, Warning, TEXT("No se pudo spawnear el pickup"));
-        return;
+        InventoryComponent->AddItem(ItemData, Quantity);
+        UE_LOG(LogTemp, Warning, TEXT("Falló el spawn del item al soltarlo; se restauró en el inventario"));
+        return false;
     }
 
-    SpawnedPickup->SetItemData(Entry.ItemData);
+    if (UStaticMeshComponent* DropMesh = DroppedActor->FindComponentByClass<UStaticMeshComponent>())
+    {
+        DropMesh->SetSimulatePhysics(true);
+        DropMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+        DropMesh->AddImpulse(Camera->GetForwardVector() * DropImpulseStrength, NAME_None, true);
+    }
 
-    InventoryComponent->RemoveItem(Entry.ItemData, 1);
     RefreshLegacyCarryFromInventory();
     UpdateMovementSpeed();
 
-    UE_LOG(LogTemp, Warning, TEXT("Objeto soltado: %s"), *Entry.ItemData->DisplayName.ToString());
+    UE_LOG(LogTemp, Warning, TEXT("Objeto soltado: %s (cantidad %d)"), *ItemData->DisplayName.ToString(), Quantity);
+    return true;
 }
 
 void AMyPlayerCharacter::AddCarriedItem(int32 Amount)

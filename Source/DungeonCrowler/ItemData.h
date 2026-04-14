@@ -23,7 +23,7 @@ public:
 	TObjectPtr<UTexture2D> Icon = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0.0"))
-	float WeightPerUnit = 0.1f;
+	float WeightPerUnit = 0.4f;
 
 	//Qué actor se genera al soltar este objeto
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")

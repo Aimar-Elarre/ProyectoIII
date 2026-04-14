@@ -5,6 +5,9 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "TimerManager.h"
+#include "Sound/SoundBase.h"
+#include "Components/AudioComponent.h"
 #include "MyPlayerHUD.h"
 #include "InventoryComponent.h"
 #include "MyPlayerCharacter.generated.h"
@@ -27,6 +30,7 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+    // Movimiento
     void MoveForward(float Value);
     void MoveRight(float Value);
     void StartRun();
@@ -39,17 +43,23 @@ public:
     void StopCrouch();
     void StartSlide();
     void StopSlide();
+    void Dash();
+    void ResetDash();
+    void UpdateMovementSpeed();
 
-    // VIDA / RESPAWN
+    // Audio / IA
+    void UpdateFootstepAudio(float ForwardValue);
+    void StopFootstepAudio();
+    void MakeMovementNoise(float Loudness);
+
+    // Vida / Respawn
     void Die();
     void KillPlayer();
     void SetLastCheckpoint(FVector NewLocation);
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
 
-    // DASH
-    void Dash();
-
+    // Dash
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Dash")
     bool bDashUnlocked = false;
 
@@ -59,14 +69,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Dash")
     void UnlockDash();
 
-    // HINTS
+    // Hints
     UFUNCTION(BlueprintCallable, Category = "UI")
     void ShowHintMessage(const FString& Message);
 
     UFUNCTION(BlueprintCallable, Category = "UI")
     void HideHintMessage();
 
-    // DROP / INVENTARIO
+    // Inventario
     void DropItem();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -78,13 +88,14 @@ public:
     UFUNCTION(BlueprintPure, Category = "Stats")
     float GetCurrentHealthValue() const;
 
-    void UpdateMovementSpeed();
+    UFUNCTION(BlueprintPure, Category = "Stamina")
+    float GetStaminaPercent() const;
 
-    // INVENTARIO NUEVO
+    // Inventario nuevo
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TObjectPtr<UInventoryComponent> InventoryComponent;
+    TObjectPtr<UInventoryComponent> InventoryComponent = nullptr;
 
-    // SLIDE
+    // Slide
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slide")
     bool bIsSliding = false;
 
@@ -92,20 +103,20 @@ public:
     float SlideImpulse = 1200.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
-    float SlideFriction = 0.5f;
+    float SlideFriction = 0.05f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
     float SlideDuration = 0.75f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slide")
-    float OriginalGroundFriction = 0.f;
+    float OriginalGroundFriction = 8.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
     float MinSlideSpeed = 350.f;
 
     FTimerHandle SlideTimerHandle;
 
-    // CHECKPOINT / RESPAWN
+    // Checkpoint / Respawn
     FTimerHandle RespawnTimerHandle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
@@ -117,19 +128,26 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
     FVector LastCheckpointLocation = FVector::ZeroVector;
 
-    // DASH
+    // Dash
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashStrength = 1000.f;
+    float DashStrength = 2000.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
     float DashCooldown = 1.f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash")
-    bool bCanDash = true;
+    bool bCanDash = false;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
+    float DashFOVBoost = 8.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
+    float DashFOVRecoverSpeed = 10.f;
+
+    float CurrentDashFOVOffset = 0.f;
     FTimerHandle DashCooldownHandle;
 
-    // CROUCH
+    // Crouch
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crouch")
     bool bIsCrouching = false;
 
@@ -142,7 +160,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
     float CrouchSpeed = 8.f;
 
-    // MOVEMENT
+    float CurrentCapsuleHeight = 88.f;
+
+    // Movement
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
     float WalkSpeed = 600.f;
 
@@ -155,11 +175,22 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
     bool bIsRunning = false;
 
-    // SENSIBILIDAD
+    bool bHasJumped = false;
+
+    // Cámara / Mouse
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouse")
     float MouseSensitivity = 1.f;
 
-    // STAMINA
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+    float NormalFOV = 90.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+    float RunFOV = 98.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+    float FOVInterpSpeed = 8.f;
+
+    // Stamina
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
     float MaxStamina = 100.f;
 
@@ -172,19 +203,16 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
     float StaminaRegenRate = 20.f;
 
-    UFUNCTION(BlueprintPure, Category = "Stamina")
-    float GetStaminaPercent() const;
-
-    // VIDA
+    // Vida
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float MaxHealth = 100.f;
 
-    UPROPERTY(VisibleAnywhere)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
     float CurrentHealth = 0.f;
 
-    // INVENTARIO / PESO (legacy)
+    // Inventario / peso legacy temporal
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    int32 ItemsCarried = 4;
+    int32 ItemsCarried = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
     float SpeedPenaltyPerItem = 0.05f;
@@ -200,14 +228,39 @@ public:
     TSubclassOf<UUserWidget> PlayerHUDClass;
 
     UPROPERTY()
-    UMyPlayerHUD* PlayerHUD = nullptr;
+    TObjectPtr<UMyPlayerHUD> PlayerHUD = nullptr;
 
-    // CÁMARA
+    // Cámara
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-    USpringArmComponent* SpringArm = nullptr;
+    TObjectPtr<USpringArmComponent> SpringArm = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-    UCameraComponent* Camera = nullptr;
+    TObjectPtr<UCameraComponent> Camera = nullptr;
+
+    // Audio
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    TObjectPtr<USoundBase> FootstepSound = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    TObjectPtr<USoundBase> JumpSound = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    TObjectPtr<USoundBase> DashSound = nullptr;
+
+    UPROPERTY(VisibleAnywhere, Category = "Audio")
+    TObjectPtr<UAudioComponent> FootstepAudioComponent = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float WalkStepInterval = 0.5f;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float RunStepInterval = 0.3f;
+
+    UPROPERTY(EditAnywhere, Category = "Audio")
+    float FootstepBlockAfterJump = 0.25f;
+
+    float LastFootstepTime = 0.f;
+    float FootstepBlockedUntil = 0.f;
 
 private:
     UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -221,4 +274,5 @@ private:
     void Input_Inventory_Toggle();
     void ShowInventory();
     void HideInventory();
+    void RefreshLegacyCarryFromInventory();
 };

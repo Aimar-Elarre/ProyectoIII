@@ -13,6 +13,9 @@ void AEnemy::BeginPlay()
     Super::BeginPlay();
 
     TargetActor = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+
+    InitialLocation = GetActorLocation();
+    InitialRotation = GetActorRotation();
 }
 
 void AEnemy::Tick(float DeltaTime)
@@ -21,20 +24,27 @@ void AEnemy::Tick(float DeltaTime)
 
     if (!TargetActor) return;
 
+    AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(TargetActor);
+    if (!Player) return;
+
     AAIController* AI = Cast<AAIController>(GetController());
-    if (AI)
+    if (!AI) return;
+
+    if (Player->bIsDead)
     {
-        AI->MoveToActor(TargetActor, 100.f);
+        AI->StopMovement();
+        SetActorLocation(InitialLocation);
+        SetActorRotation(InitialRotation);
+        return;
     }
+
+    AI->MoveToActor(TargetActor, 100.f);
 
     float DistanceToPlayer = FVector::Dist(GetActorLocation(), TargetActor->GetActorLocation());
 
-    if (DistanceToPlayer <= KillDistance)
+    if (DistanceToPlayer <= KillDistance && !Player->bIsDead)
     {
-        AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(TargetActor);
-        if (Player)
-        {
-            Player->KillPlayer();
-        }
+        Player->KillPlayer();
+        AI->StopMovement();
     }
 }

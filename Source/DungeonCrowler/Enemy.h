@@ -14,6 +14,8 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    FVector InitialLocation;
+    FRotator InitialRotation;
 
 public:
     virtual void Tick(float DeltaTime) override;

@@ -26,27 +26,29 @@ void UInventorySlotWidget::InitSlot(const FInventoryEntry& Entry, UInventoryComp
         return;
     }
 
+    const float UnitWeight = Entry.ItemData->WeightPerUnit;
+    const float TotalWeight = Entry.Quantity * UnitWeight;
+
     if (ItemNameText)
     {
-        ItemNameText->SetText(Entry.ItemData->DisplayName);
-    }
-
-    if (QuantityText)
-    {
-        QuantityText->SetText(
-            FText::FromString(FString::Printf(TEXT("x%d"), Entry.Quantity))
+        ItemNameText->SetText(
+            FText::FromString(
+                FString::Printf(
+                    TEXT("%s (%d)"),
+                    *Entry.ItemData->DisplayName.ToString(),
+                    Entry.Quantity
+                )
+            )
         );
     }
 
     if (ItemInfoText)
     {
-        const float TotalWeight = Entry.Quantity * Entry.ItemData->WeightPerUnit;
-
         ItemInfoText->SetText(
             FText::FromString(
                 FString::Printf(
-                    TEXT("Peso/u: %.1f   Total: %.1f"),
-                    Entry.ItemData->WeightPerUnit,
+                    TEXT("Peso (%.1f) / Total (%.1f)"),
+                    UnitWeight,
                     TotalWeight
                 )
             )

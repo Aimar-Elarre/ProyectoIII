@@ -32,9 +32,6 @@ protected:
     TObjectPtr<UTextBlock> ItemInfoText;
 
     UPROPERTY(meta = (BindWidget))
-    TObjectPtr<UTextBlock> QuantityText;
-
-    UPROPERTY(meta = (BindWidget))
     TObjectPtr<UButton> DropButton;
 
 private:

@@ -59,6 +59,15 @@ public:
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
+    bool bSprintUnlocked = false;
+
+    UFUNCTION(BlueprintCallable, Category = "Run")
+    bool IsSprintUnlocked() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Run")
+    void UnlockSprint();
+
     // Dash
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Dash")
     bool bDashUnlocked = false;

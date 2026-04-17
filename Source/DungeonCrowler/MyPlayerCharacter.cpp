@@ -82,6 +82,7 @@ void AMyPlayerCharacter::BeginPlay()
         if (PlayerHUD)
         {
             PlayerHUD->AddToViewport();
+            PlayerHUD->SetStaminaVisibility(bSprintUnlocked);
         }
     }
 
@@ -272,6 +273,7 @@ void AMyPlayerCharacter::StopJump()
 
 void AMyPlayerCharacter::StartRun()
 {
+    if (!bSprintUnlocked) return;
     if (bIsSliding) return;
     if (bIsCrouching) return;
     if (CurrentStamina <= 0.f) return;
@@ -281,6 +283,8 @@ void AMyPlayerCharacter::StartRun()
     HorizontalVelocity.Z = 0.f;
 
     if (HorizontalVelocity.SizeSquared() <= 1.f) return;
+
+    HideHintMessage();
 
     bIsRunning = true;
     UpdateMovementSpeed();
@@ -747,6 +751,23 @@ void AMyPlayerCharacter::HideInventory()
     FInputModeGameOnly Mode;
     PC->SetInputMode(Mode);
     PC->bShowMouseCursor = false;
+}
+
+bool AMyPlayerCharacter::IsSprintUnlocked() const
+{
+    return bSprintUnlocked;
+}
+
+void AMyPlayerCharacter::UnlockSprint()
+{
+    bSprintUnlocked = true;
+
+    if (PlayerHUD)
+    {
+        PlayerHUD->SetStaminaVisibility(true);
+    }
+
+    ShowHintMessage(TEXT("Usa Shift para poder correr"));
 }
 
 void AMyPlayerCharacter::RefreshLegacyCarryFromInventory()

@@ -169,6 +169,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
     float CrouchSpeed = 8.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+    float MeshStandingZ = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+    float MeshCrouchingZ = -25.f;
+
+    float CurrentMeshZ = 0.f;
+
     float CurrentCapsuleHeight = 88.f;
 
     // Movement

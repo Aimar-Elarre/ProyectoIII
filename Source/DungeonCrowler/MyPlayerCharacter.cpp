@@ -62,6 +62,12 @@ void AMyPlayerCharacter::BeginPlay()
     GetCharacterMovement()->JumpZVelocity = JumpStrength;
     UpdateMovementSpeed();
 
+    if (GetMesh())
+    {
+        CurrentMeshZ = GetMesh()->GetRelativeLocation().Z;
+        MeshStandingZ = CurrentMeshZ;
+    }
+
     if (Camera)
     {
         Camera->SetFieldOfView(NormalFOV);
@@ -175,6 +181,22 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         CrouchSpeed
     );
 
+
+    if (GetMesh())
+    {
+        const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
+
+        CurrentMeshZ = FMath::FInterpTo(
+            CurrentMeshZ,
+            TargetMeshZ,
+            DeltaTime,
+            CrouchSpeed
+        );
+
+        FVector MeshLocation = GetMesh()->GetRelativeLocation();
+        MeshLocation.Z = CurrentMeshZ;
+        GetMesh()->SetRelativeLocation(MeshLocation);
+    }
     GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
 
     if (Camera)

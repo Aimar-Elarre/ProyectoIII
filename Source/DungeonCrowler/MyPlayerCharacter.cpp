@@ -111,7 +111,8 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
 
     if (bIsRunning && (!bOnGround || HorizontalVelocity.SizeSquared() <= 1.f))
     {
-        StopRun();
+        bIsRunning = false;
+        UpdateMovementSpeed();
     }
 
     if (bIsRunning)
@@ -121,7 +122,8 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         if (CurrentStamina <= 0.f)
         {
             CurrentStamina = 0.f;
-            StopRun();
+            bIsRunning = false;
+            UpdateMovementSpeed();
         }
     }
     else
@@ -130,6 +132,29 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         {
             CurrentStamina += StaminaRegenRate * DeltaTime;
             CurrentStamina = FMath::Clamp(CurrentStamina, 0.f, MaxStamina);
+        }
+    }
+
+    if (!bIsRunning && bRunKeyHeld)
+    {
+        const bool bCanTryRun =
+            bSprintUnlocked &&
+            !bIsSliding &&
+            !bIsCrouching &&
+            bOnGround &&
+            CurrentStamina > 0.f;
+
+        if (bCanTryRun)
+        {
+            FVector RunVelocity = GetVelocity();
+            RunVelocity.Z = 0.f;
+
+            if (RunVelocity.SizeSquared() > 1.f)
+            {
+                bIsRunning = true;
+                HideHintMessage();
+                UpdateMovementSpeed();
+            }
         }
     }
 
@@ -273,6 +298,8 @@ void AMyPlayerCharacter::StopJump()
 
 void AMyPlayerCharacter::StartRun()
 {
+    bRunKeyHeld = true;
+
     if (!bSprintUnlocked) return;
     if (bIsSliding) return;
     if (bIsCrouching) return;
@@ -292,6 +319,7 @@ void AMyPlayerCharacter::StartRun()
 
 void AMyPlayerCharacter::StopRun()
 {
+    bRunKeyHeld = false;
     bIsRunning = false;
     UpdateMovementSpeed();
 }

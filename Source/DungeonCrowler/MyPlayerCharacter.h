@@ -183,7 +183,7 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
     bool bIsRunning = false;
-
+    bool bRunKeyHeld = false;
     bool bHasJumped = false;
 
     // Cámara / Mouse

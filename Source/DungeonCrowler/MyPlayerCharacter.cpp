@@ -7,6 +7,7 @@
 #include "Engine/Engine.h"
 #include "TimerManager.h"
 #include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "InventoryWidget.h"
 #include "ItemData.h"
 #include "Perception/AISense_Hearing.h"
@@ -248,6 +249,10 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+
+    PlayerInputComponent->BindKey(EKeys::F5, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
+    PlayerInputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockDash);
+    PlayerInputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AMyPlayerCharacter::Debug_FillStamina);
     FInputActionBinding& InventoryBinding =
         PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
 
@@ -716,8 +721,16 @@ void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
     {
         PlayerHUD->ShowHint(Message);
     }
-}
 
+    GetWorldTimerManager().ClearTimer(HintTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        HintTimerHandle,
+        this,
+        &AMyPlayerCharacter::HideHintMessage,
+        3.0f,
+        false
+    );
+}
 void AMyPlayerCharacter::HideHintMessage()
 {
     if (PlayerHUD)
@@ -746,6 +759,28 @@ void AMyPlayerCharacter::Input_Inventory_Toggle()
     {
         ShowInventory();
     }
+}
+
+void AMyPlayerCharacter::Debug_UnlockSprint()
+{
+    UnlockSprint();
+}
+
+void AMyPlayerCharacter::Debug_UnlockDash()
+{
+    UnlockDash();
+}
+
+void AMyPlayerCharacter::Debug_FillStamina()
+{
+    CurrentStamina = MaxStamina;
+
+    if (PlayerHUD)
+    {
+        PlayerHUD->UpdateStamina(GetStaminaPercent());
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("DEBUG: Stamina rellenada"));
 }
 
 void AMyPlayerCharacter::ShowInventory()

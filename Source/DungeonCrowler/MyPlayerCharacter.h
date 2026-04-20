@@ -27,6 +27,7 @@ protected:
     virtual void BeginPlay() override;
 
 public:
+    FTimerHandle HintTimerHandle;
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -58,6 +59,16 @@ public:
     void SetLastCheckpoint(FVector NewLocation);
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
+
+
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void Debug_UnlockSprint();
+
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void Debug_UnlockDash();
+
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void Debug_FillStamina();
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
     bool bSprintUnlocked = false;

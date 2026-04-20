@@ -27,7 +27,6 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-    FTimerHandle HintTimerHandle;
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -60,16 +59,7 @@ public:
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
 
-
-    UFUNCTION(BlueprintCallable, Category = "Debug")
-    void Debug_UnlockSprint();
-
-    UFUNCTION(BlueprintCallable, Category = "Debug")
-    void Debug_UnlockDash();
-
-    UFUNCTION(BlueprintCallable, Category = "Debug")
-    void Debug_FillStamina();
-
+    // Sprint
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
     bool bSprintUnlocked = false;
 
@@ -88,6 +78,16 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Dash")
     void UnlockDash();
+
+    // Inventario desbloqueable
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory")
+    bool bInventoryUnlocked = false;
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool IsInventoryUnlocked() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    void UnlockInventory();
 
     // Hints
     UFUNCTION(BlueprintCallable, Category = "UI")
@@ -110,6 +110,16 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Stamina")
     float GetStaminaPercent() const;
+
+    // Debug
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void Debug_UnlockSprint();
+
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void Debug_UnlockDash();
+
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void Debug_FillStamina();
 
     // Inventario nuevo
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
@@ -187,7 +197,6 @@ public:
     float MeshCrouchingZ = -25.f;
 
     float CurrentMeshZ = 0.f;
-
     float CurrentCapsuleHeight = 88.f;
 
     // Movement
@@ -202,6 +211,7 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
     bool bIsRunning = false;
+
     bool bRunKeyHeld = false;
     bool bHasJumped = false;
 
@@ -299,8 +309,14 @@ private:
 
     bool bInventoryOpen = false;
 
+    FTimerHandle HintTimerHandle;
+    FTimerHandle InventoryTutorialSecondHintHandle;
+
     void Input_Inventory_Toggle();
     void ShowInventory();
     void HideInventory();
     void RefreshLegacyCarryFromInventory();
+
+    UFUNCTION()
+    void ShowInventorySecondHint();
 };

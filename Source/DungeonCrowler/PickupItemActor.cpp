@@ -51,12 +51,17 @@ void APickupItemActor::OnOverlapBegin(
 	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
 	if (!Player) return;
 
+	if (!Player->IsInventoryUnlocked())
+	{
+		return;
+	}
+
 	if (ItemData && Player->InventoryComponent)
 	{
 		bool bAdded = Player->InventoryComponent->AddItem(ItemData, 1);
 		if (!bAdded)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No se pudo añadir al inventario (peso máximo?)"));
+			UE_LOG(LogTemp, Warning, TEXT("No se pudo añadir al inventario"));
 			return;
 		}
 	}

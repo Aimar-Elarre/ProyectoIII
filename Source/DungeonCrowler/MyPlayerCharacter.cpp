@@ -182,7 +182,6 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         CrouchSpeed
     );
 
-
     if (GetMesh())
     {
         const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
@@ -198,6 +197,7 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         MeshLocation.Z = CurrentMeshZ;
         GetMesh()->SetRelativeLocation(MeshLocation);
     }
+
     GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
 
     if (Camera)
@@ -253,6 +253,7 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindKey(EKeys::F5, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
     PlayerInputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockDash);
     PlayerInputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AMyPlayerCharacter::Debug_FillStamina);
+
     FInputActionBinding& InventoryBinding =
         PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
 
@@ -727,10 +728,16 @@ void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
         HintTimerHandle,
         this,
         &AMyPlayerCharacter::HideHintMessage,
-        3.0f,
+        5.0f,
         false
     );
 }
+
+void AMyPlayerCharacter::ShowInventorySecondHint()
+{
+    ShowHintMessage(TEXT("Cada objeto pesa y tu mochila tiene un límite.\nSuelta lo que no necesites: cuanto más cargues, peor te moverás."));
+}
+
 void AMyPlayerCharacter::HideHintMessage()
 {
     if (PlayerHUD)
@@ -751,6 +758,11 @@ float AMyPlayerCharacter::GetStaminaPercent() const
 
 void AMyPlayerCharacter::Input_Inventory_Toggle()
 {
+    if (!bInventoryUnlocked)
+    {
+        return;
+    }
+
     if (bInventoryOpen)
     {
         HideInventory();
@@ -759,6 +771,27 @@ void AMyPlayerCharacter::Input_Inventory_Toggle()
     {
         ShowInventory();
     }
+}
+
+bool AMyPlayerCharacter::IsInventoryUnlocked() const
+{
+    return bInventoryUnlocked;
+}
+
+void AMyPlayerCharacter::UnlockInventory()
+{
+    bInventoryUnlocked = true;
+
+    ShowHintMessage(TEXT("Pulsa Tab para abrir el inventario y recoger objetos del suelo"));
+
+    GetWorldTimerManager().ClearTimer(InventoryTutorialSecondHintHandle);
+    GetWorldTimerManager().SetTimer(
+        InventoryTutorialSecondHintHandle,
+        this,
+        &AMyPlayerCharacter::ShowInventorySecondHint,
+        3.5f,
+        false
+    );
 }
 
 void AMyPlayerCharacter::Debug_UnlockSprint()
@@ -819,6 +852,7 @@ void AMyPlayerCharacter::ShowInventory()
     PC->SetInputMode(Mode);
     PC->bShowMouseCursor = true;
 }
+
 void AMyPlayerCharacter::HideInventory()
 {
     APlayerController* PC = Cast<APlayerController>(GetController());

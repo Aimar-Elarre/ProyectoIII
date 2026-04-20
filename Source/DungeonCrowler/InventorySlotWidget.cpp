@@ -4,6 +4,8 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "ItemData.h"
+#include "MyPlayerCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "InventoryComponent.h"
 
 void UInventorySlotWidget::NativeConstruct()
@@ -63,10 +65,16 @@ void UInventorySlotWidget::InitSlot(const FInventoryEntry& Entry, UInventoryComp
 
 void UInventorySlotWidget::OnDropClicked()
 {
-    if (!InventoryComp || !CachedEntry.ItemData)
+    if (!CachedEntry.ItemData)
     {
         return;
     }
 
-    InventoryComp->RemoveItem(CachedEntry.ItemData, 1);
+    AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    if (!Player)
+    {
+        return;
+    }
+
+    Player->DropSpecificItem(CachedEntry.ItemData);
 }

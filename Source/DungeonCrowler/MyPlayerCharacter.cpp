@@ -233,6 +233,41 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     }
 }
 
+void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
+{
+    if (!InventoryComponent || !ItemData || !ItemData->PickupActorClass)
+    {
+        return;
+    }
+
+    const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
+    const FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    APickupItemActor* SpawnedPickup = GetWorld()->SpawnActor<APickupItemActor>(
+        ItemData->PickupActorClass,
+        SpawnLocation,
+        SpawnRotation,
+        SpawnParams
+    );
+
+    if (!SpawnedPickup)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No se pudo spawnear el pickup"));
+        return;
+    }
+
+    SpawnedPickup->SetItemData(ItemData);
+
+    InventoryComponent->RemoveItem(ItemData, 1);
+    RefreshLegacyCarryFromInventory();
+    UpdateMovementSpeed();
+
+    UE_LOG(LogTemp, Warning, TEXT("Objeto soltado desde widget: %s"), *ItemData->DisplayName.ToString());
+}
+
 void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -254,8 +289,9 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+    PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
 
-    PlayerInputComponent->BindKey(EKeys::F5, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
+    PlayerInputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
     PlayerInputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockDash);
     PlayerInputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AMyPlayerCharacter::Debug_FillStamina);
 
@@ -301,6 +337,33 @@ void AMyPlayerCharacter::MoveRight(float Value)
         }
     }
 }
+void AMyPlayerCharacter::TryInteractPickup()
+{
+    if (NearbyPickup)
+    {
+        NearbyPickup->TryPickup(this);
+    }
+}
+
+void AMyPlayerCharacter::SetNearbyPickup(APickupItemActor* NewPickup)
+{
+    NearbyPickup = NewPickup;
+
+    if (NearbyPickup)
+    {
+        ShowHintMessage(TEXT("Pulsa V para recoger"));
+    }
+}
+
+void AMyPlayerCharacter::ClearNearbyPickup(APickupItemActor* PickupToClear)
+{
+    if (NearbyPickup == PickupToClear)
+    {
+        NearbyPickup = nullptr;
+        HideHintMessage();
+    }
+}
+
 
 void AMyPlayerCharacter::StartJump()
 {
@@ -369,7 +432,7 @@ void AMyPlayerCharacter::StartCrouch()
     }
 
     bIsCrouching = true;
-    StopRun();
+    bIsRunning = false;
     UpdateMovementSpeed();
 }
 

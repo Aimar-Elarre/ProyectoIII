@@ -14,6 +14,7 @@
 
 class APickupItemActor;
 class UInventoryWidget;
+class UItemData;
 
 UCLASS()
 class DUNGEONCROWLER_API AMyPlayerCharacter : public ACharacter
@@ -25,6 +26,8 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    UPROPERTY()
+    TObjectPtr<APickupItemActor> NearbyPickup = nullptr;
 
 public:
     virtual void Tick(float DeltaTime) override;
@@ -59,6 +62,15 @@ public:
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
 
+
+    UFUNCTION(BlueprintCallable, Category = "Pickup")
+    void TryInteractPickup();
+
+    void SetNearbyPickup(APickupItemActor* NewPickup);
+    void ClearNearbyPickup(APickupItemActor* PickupToClear);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    void DropSpecificItem(const UItemData* ItemData);
     // Sprint
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
     bool bSprintUnlocked = false;

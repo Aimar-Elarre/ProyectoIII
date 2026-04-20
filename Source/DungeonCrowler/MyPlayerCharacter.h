@@ -143,7 +143,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
     float MinSlideSpeed = 350.f;
-
+    int32 LastItemsCarriedForMovement = -1;
     FTimerHandle SlideTimerHandle;
 
     // Checkpoint / Respawn

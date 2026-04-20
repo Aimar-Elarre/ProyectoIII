@@ -166,6 +166,11 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     }
 
     RefreshLegacyCarryFromInventory();
+    if (ItemsCarried != LastItemsCarriedForMovement)
+    {
+        LastItemsCarriedForMovement = ItemsCarried;
+        UpdateMovementSpeed();
+    }
 
     if (PlayerHUD)
     {
@@ -488,6 +493,21 @@ void AMyPlayerCharacter::UpdateMovementSpeed()
 
     UE_LOG(LogTemp, Warning, TEXT("Items: %d | Speed: %f | Jump: %f"),
         ItemsCarried, FinalSpeed, FinalJump);
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            12345,
+            1.5f,
+            FColor::Yellow,
+            FString::Printf(
+                TEXT("Items=%d | Speed=%.1f | Jump=%.1f"),
+                ItemsCarried,
+                FinalSpeed,
+                FinalJump
+            )
+        );
+    }
 }
 
 void AMyPlayerCharacter::UpdateFootstepAudio(float ForwardValue)

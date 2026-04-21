@@ -49,16 +49,25 @@ void APickupItemActor::OnOverlapBegin(
 	if (!OtherActor) return;
 
 	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
-	if (!Player) return;
+	if (!Player)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Cast a AMyPlayerCharacter falló. OtherActor: %s"), *OtherActor->GetClass()->GetName());
+		return;
+	}
 
+	// ===== BREAKPOINT: Aquí entra cuando el jugador toca un pickup =====
 	if (ItemData && Player->InventoryComponent)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Item tocado: %s"), *ItemData->GetName());
+		
 		bool bAdded = Player->InventoryComponent->AddItem(ItemData, 1);
 		if (!bAdded)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("No se pudo añadir al inventario (peso máximo?)"));
+			UE_LOG(LogTemp, Warning, TEXT("[PICKUP] ¡No se pudo añadir al inventario! Peso máximo alcanzado"));
 			return;
 		}
+		
+		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Item añadido al inventario correctamente"));
 	}
 
 	Player->AddCarriedItem(1);
@@ -67,6 +76,16 @@ void APickupItemActor::OnOverlapBegin(
 	if (ItemData && ItemData->MoneyValue > 0.f)
 	{
 		Player->AddMoney(ItemData->MoneyValue);
+		
+		// ===== BREAKPOINT: Confirmar adición de dinero =====
+		float NewMoney = Player->GetCurrentMoney();
+		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Dinero añadido: +%.2f | Dinero total ahora: %.2f"), 
+			ItemData->MoneyValue, NewMoney);
+	}
+	else if (ItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Item sin valor monetario: %s (MoneyValue = %.2f)"), 
+			*ItemData->GetName(), ItemData ? ItemData->MoneyValue : 0.0f);
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Objeto recogido. Total: %d"), Player->GetItemsCarried());

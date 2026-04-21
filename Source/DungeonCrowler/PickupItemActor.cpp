@@ -68,7 +68,11 @@ void APickupItemActor::OnOverlapEnd(
 )
 {
 	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
-	if (!Player) return;
+	if (!Player)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Cast a AMyPlayerCharacter falló. OtherActor: %s"), *OtherActor->GetClass()->GetName());
+		return;
+	}
 
 	Player->ClearNearbyPickup(this);
 }
@@ -95,6 +99,11 @@ void APickupItemActor::TryPickup(AMyPlayerCharacter* Player)
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Objeto recogido: %s"), *ItemData->DisplayName.ToString());
+	// Añadir dinero del item al jugador
+	if (ItemData && ItemData->MoneyValue > 0.f)
+	{
+		Player->AddMoney(ItemData->MoneyValue);
+	}
 
 	Destroy();
 }

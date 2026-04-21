@@ -25,6 +25,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0.0"))
 	float WeightPerUnit = 0.4f;
 
+	// Dinero que proporciona este item al recogerlo
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0.0"))
+	float MoneyValue = 0.0f;
+
 	//Qué actor se genera al soltar este objeto
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TSubclassOf<APickupItemActor> PickupActorClass;

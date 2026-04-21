@@ -67,6 +67,9 @@ void AMyPlayerCharacter::BeginPlay()
     {
         CurrentMeshZ = GetMesh()->GetRelativeLocation().Z;
         MeshStandingZ = CurrentMeshZ;
+
+        CurrentMeshScale = GetMesh()->GetRelativeScale3D();
+        MeshStandingScale = CurrentMeshScale;
     }
 
     if (Camera)
@@ -166,6 +169,7 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     }
 
     RefreshLegacyCarryFromInventory();
+
     if (ItemsCarried != LastItemsCarriedForMovement)
     {
         LastItemsCarriedForMovement = ItemsCarried;
@@ -201,6 +205,17 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         FVector MeshLocation = GetMesh()->GetRelativeLocation();
         MeshLocation.Z = CurrentMeshZ;
         GetMesh()->SetRelativeLocation(MeshLocation);
+
+        const FVector TargetScale = bIsCrouching ? MeshCrouchingScale : MeshStandingScale;
+
+        CurrentMeshScale = FMath::VInterpTo(
+            CurrentMeshScale,
+            TargetScale,
+            DeltaTime,
+            CrouchSpeed
+        );
+
+        GetMesh()->SetRelativeScale3D(CurrentMeshScale);
     }
 
     GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);

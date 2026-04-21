@@ -62,6 +62,13 @@ public:
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+    FVector MeshStandingScale = FVector(1.0f, 1.0f, 1.0f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+    FVector MeshCrouchingScale = FVector(0.92f, 0.92f, 0.88f);
+
+    FVector CurrentMeshScale = FVector(1.0f, 1.0f, 1.0f);
 
     UFUNCTION(BlueprintCallable, Category = "Pickup")
     void TryInteractPickup();

@@ -71,7 +71,9 @@ void AEnemy::Tick(float DeltaTime)
     }
     
     AAIController* AI = Cast<AAIController>(GetController());
-    if (AI)
+    if (!AI) return;
+
+    if (Player->bIsDead)
     {
         UE_LOG(LogTemp, Warning, TEXT("[ENEMY] Cast a AAIController EXITOSO. Llamando MoveToActor..."));
         UE_LOG(LogTemp, Warning, TEXT("[ENEMY] Posición Enemigo: %s"), *GetActorLocation().ToString());
@@ -103,16 +105,15 @@ void AEnemy::Tick(float DeltaTime)
         UE_LOG(LogTemp, Error, TEXT("[ENEMY] ¡ERROR! Cast a AAIController FALLÓ. El enemigo NO perseguirá."));
     }
 
+    AI->MoveToActor(TargetActor, 100.f);
+
     float DistanceToPlayer = FVector::Dist(GetActorLocation(), TargetActor->GetActorLocation());
     UE_LOG(LogTemp, Log, TEXT("[ENEMY] Distancia al jugador: %.2f"), DistanceToPlayer);
 
-    if (DistanceToPlayer <= KillDistance)
+    if (DistanceToPlayer <= KillDistance && !Player->bIsDead)
     {
-        AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(TargetActor);
-        if (Player)
-        {
-            Player->KillPlayer();
-        }
+        Player->KillPlayer();
+        AI->StopMovement();
     }
 }
 

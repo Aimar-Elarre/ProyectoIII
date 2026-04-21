@@ -4,6 +4,8 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "ItemData.h"
+#include "MyPlayerCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "InventoryComponent.h"
 
 void UInventorySlotWidget::NativeConstruct()
@@ -21,22 +23,38 @@ void UInventorySlotWidget::InitSlot(const FInventoryEntry& Entry, UInventoryComp
     CachedEntry = Entry;
     InventoryComp = InInventoryComp;
 
-    if (!Entry.ItemData) return;
+    if (!Entry.ItemData)
+    {
+        return;
+    }
+
+    const float UnitWeight = Entry.ItemData->WeightPerUnit;
+    const float TotalWeight = Entry.Quantity * UnitWeight;
 
     if (ItemNameText)
     {
-        ItemNameText->SetText(Entry.ItemData->DisplayName);
+        ItemNameText->SetText(
+            FText::FromString(
+                FString::Printf(
+                    TEXT("%s (%d)"),
+                    *Entry.ItemData->DisplayName.ToString(),
+                    Entry.Quantity
+                )
+            )
+        );
     }
 
-    if (QuantityText)
+    if (ItemInfoText)
     {
-        QuantityText->SetText(FText::AsNumber(Entry.Quantity));
-    }
-
-    if (WeightText)
-    {
-        const float TotalWeight = Entry.Quantity * Entry.ItemData->WeightPerUnit;
-        WeightText->SetText(FText::AsNumber(TotalWeight));
+        ItemInfoText->SetText(
+            FText::FromString(
+                FString::Printf(
+                    TEXT("Peso (%.1f) / Total (%.1f)"),
+                    UnitWeight,
+                    TotalWeight
+                )
+            )
+        );
     }
 
     if (ItemIcon && Entry.ItemData->Icon)
@@ -47,7 +65,16 @@ void UInventorySlotWidget::InitSlot(const FInventoryEntry& Entry, UInventoryComp
 
 void UInventorySlotWidget::OnDropClicked()
 {
-    if (!InventoryComp || !CachedEntry.ItemData) return;
+    if (!CachedEntry.ItemData)
+    {
+        return;
+    }
 
-    InventoryComp->RemoveItem(CachedEntry.ItemData, 1);
+    AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    if (!Player)
+    {
+        return;
+    }
+
+    Player->DropSpecificItem(CachedEntry.ItemData);
 }

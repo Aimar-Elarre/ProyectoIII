@@ -24,9 +24,6 @@ protected:
 	UStaticMeshComponent* Mesh;
 
 	UPROPERTY(EditAnywhere)
-	float Damage = 25.f;
-
-	UPROPERTY(EditAnywhere)
 	USoundBase* TrapSound;
 
 	virtual void BeginPlay() override;

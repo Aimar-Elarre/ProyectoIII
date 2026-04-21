@@ -7,6 +7,7 @@
 #include "Engine/Engine.h"
 #include "TimerManager.h"
 #include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "InventoryWidget.h"
 #include "ItemData.h"
 #include "Perception/AISense_Hearing.h"
@@ -62,6 +63,12 @@ void AMyPlayerCharacter::BeginPlay()
     GetCharacterMovement()->JumpZVelocity = JumpStrength;
     UpdateMovementSpeed();
 
+    if (GetMesh())
+    {
+        CurrentMeshZ = GetMesh()->GetRelativeLocation().Z;
+        MeshStandingZ = CurrentMeshZ;
+    }
+
     if (Camera)
     {
         Camera->SetFieldOfView(NormalFOV);
@@ -82,6 +89,7 @@ void AMyPlayerCharacter::BeginPlay()
         if (PlayerHUD)
         {
             PlayerHUD->AddToViewport();
+            PlayerHUD->SetStaminaVisibility(bSprintUnlocked);
         }
     }
 
@@ -110,7 +118,8 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
 
     if (bIsRunning && (!bOnGround || HorizontalVelocity.SizeSquared() <= 1.f))
     {
-        StopRun();
+        bIsRunning = false;
+        UpdateMovementSpeed();
     }
 
     if (bIsRunning)
@@ -120,7 +129,8 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         if (CurrentStamina <= 0.f)
         {
             CurrentStamina = 0.f;
-            StopRun();
+            bIsRunning = false;
+            UpdateMovementSpeed();
         }
     }
     else
@@ -132,7 +142,35 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         }
     }
 
+    if (!bIsRunning && bRunKeyHeld)
+    {
+        const bool bCanTryRun =
+            bSprintUnlocked &&
+            !bIsSliding &&
+            !bIsCrouching &&
+            bOnGround &&
+            CurrentStamina > 0.f;
+
+        if (bCanTryRun)
+        {
+            FVector RunVelocity = GetVelocity();
+            RunVelocity.Z = 0.f;
+
+            if (RunVelocity.SizeSquared() > 1.f)
+            {
+                bIsRunning = true;
+                HideHintMessage();
+                UpdateMovementSpeed();
+            }
+        }
+    }
+
     RefreshLegacyCarryFromInventory();
+    if (ItemsCarried != LastItemsCarriedForMovement)
+    {
+        LastItemsCarriedForMovement = ItemsCarried;
+        UpdateMovementSpeed();
+    }
 
     if (PlayerHUD)
     {
@@ -148,6 +186,22 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         DeltaTime,
         CrouchSpeed
     );
+
+    if (GetMesh())
+    {
+        const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
+
+        CurrentMeshZ = FMath::FInterpTo(
+            CurrentMeshZ,
+            TargetMeshZ,
+            DeltaTime,
+            CrouchSpeed
+        );
+
+        FVector MeshLocation = GetMesh()->GetRelativeLocation();
+        MeshLocation.Z = CurrentMeshZ;
+        GetMesh()->SetRelativeLocation(MeshLocation);
+    }
 
     GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
 
@@ -179,6 +233,41 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     }
 }
 
+void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
+{
+    if (!InventoryComponent || !ItemData || !ItemData->PickupActorClass)
+    {
+        return;
+    }
+
+    const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
+    const FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    APickupItemActor* SpawnedPickup = GetWorld()->SpawnActor<APickupItemActor>(
+        ItemData->PickupActorClass,
+        SpawnLocation,
+        SpawnRotation,
+        SpawnParams
+    );
+
+    if (!SpawnedPickup)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No se pudo spawnear el pickup"));
+        return;
+    }
+
+    SpawnedPickup->SetItemData(ItemData);
+
+    InventoryComponent->RemoveItem(ItemData, 1);
+    RefreshLegacyCarryFromInventory();
+    UpdateMovementSpeed();
+
+    UE_LOG(LogTemp, Warning, TEXT("Objeto soltado desde widget: %s"), *ItemData->DisplayName.ToString());
+}
+
 void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -200,7 +289,16 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
-    PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
+    PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
+
+    PlayerInputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
+    PlayerInputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockDash);
+    PlayerInputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AMyPlayerCharacter::Debug_FillStamina);
+
+    FInputActionBinding& InventoryBinding =
+        PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
+
+    InventoryBinding.bExecuteWhenPaused = true;
 }
 
 void AMyPlayerCharacter::MoveForward(float Value)
@@ -239,6 +337,33 @@ void AMyPlayerCharacter::MoveRight(float Value)
         }
     }
 }
+void AMyPlayerCharacter::TryInteractPickup()
+{
+    if (NearbyPickup)
+    {
+        NearbyPickup->TryPickup(this);
+    }
+}
+
+void AMyPlayerCharacter::SetNearbyPickup(APickupItemActor* NewPickup)
+{
+    NearbyPickup = NewPickup;
+
+    if (NearbyPickup)
+    {
+        ShowHintMessage(TEXT("Pulsa V para recoger"));
+    }
+}
+
+void AMyPlayerCharacter::ClearNearbyPickup(APickupItemActor* PickupToClear)
+{
+    if (NearbyPickup == PickupToClear)
+    {
+        NearbyPickup = nullptr;
+        HideHintMessage();
+    }
+}
+
 
 void AMyPlayerCharacter::StartJump()
 {
@@ -269,6 +394,9 @@ void AMyPlayerCharacter::StopJump()
 
 void AMyPlayerCharacter::StartRun()
 {
+    bRunKeyHeld = true;
+
+    if (!bSprintUnlocked) return;
     if (bIsSliding) return;
     if (bIsCrouching) return;
     if (CurrentStamina <= 0.f) return;
@@ -279,12 +407,15 @@ void AMyPlayerCharacter::StartRun()
 
     if (HorizontalVelocity.SizeSquared() <= 1.f) return;
 
+    HideHintMessage();
+
     bIsRunning = true;
     UpdateMovementSpeed();
 }
 
 void AMyPlayerCharacter::StopRun()
 {
+    bRunKeyHeld = false;
     bIsRunning = false;
     UpdateMovementSpeed();
 }
@@ -301,7 +432,7 @@ void AMyPlayerCharacter::StartCrouch()
     }
 
     bIsCrouching = true;
-    StopRun();
+    bIsRunning = false;
     UpdateMovementSpeed();
 }
 
@@ -425,6 +556,21 @@ void AMyPlayerCharacter::UpdateMovementSpeed()
 
     UE_LOG(LogTemp, Warning, TEXT("Items: %d | Speed: %f | Jump: %f"),
         ItemsCarried, FinalSpeed, FinalJump);
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            12345,
+            1.5f,
+            FColor::Yellow,
+            FString::Printf(
+                TEXT("Items=%d | Speed=%.1f | Jump=%.1f"),
+                ItemsCarried,
+                FinalSpeed,
+                FinalJump
+            )
+        );
+    }
 }
 
 void AMyPlayerCharacter::UpdateFootstepAudio(float ForwardValue)
@@ -659,6 +805,20 @@ void AMyPlayerCharacter::ShowHintMessage(const FString& Message)
     {
         PlayerHUD->ShowHint(Message);
     }
+
+    GetWorldTimerManager().ClearTimer(HintTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        HintTimerHandle,
+        this,
+        &AMyPlayerCharacter::HideHintMessage,
+        5.0f,
+        false
+    );
+}
+
+void AMyPlayerCharacter::ShowInventorySecondHint()
+{
+    ShowHintMessage(TEXT("Cada objeto pesa y tu mochila tiene un límite.\nSuelta lo que no necesites: cuanto más cargues, peor te moverás."));
 }
 
 void AMyPlayerCharacter::HideHintMessage()
@@ -698,6 +858,11 @@ float AMyPlayerCharacter::GetCurrentMoney() const
 
 void AMyPlayerCharacter::Input_Inventory_Toggle()
 {
+    if (!bInventoryUnlocked)
+    {
+        return;
+    }
+
     if (bInventoryOpen)
     {
         HideInventory();
@@ -706,6 +871,49 @@ void AMyPlayerCharacter::Input_Inventory_Toggle()
     {
         ShowInventory();
     }
+}
+
+bool AMyPlayerCharacter::IsInventoryUnlocked() const
+{
+    return bInventoryUnlocked;
+}
+
+void AMyPlayerCharacter::UnlockInventory()
+{
+    bInventoryUnlocked = true;
+
+    ShowHintMessage(TEXT("Pulsa Tab para abrir el inventario y recoger objetos del suelo"));
+
+    GetWorldTimerManager().ClearTimer(InventoryTutorialSecondHintHandle);
+    GetWorldTimerManager().SetTimer(
+        InventoryTutorialSecondHintHandle,
+        this,
+        &AMyPlayerCharacter::ShowInventorySecondHint,
+        3.5f,
+        false
+    );
+}
+
+void AMyPlayerCharacter::Debug_UnlockSprint()
+{
+    UnlockSprint();
+}
+
+void AMyPlayerCharacter::Debug_UnlockDash()
+{
+    UnlockDash();
+}
+
+void AMyPlayerCharacter::Debug_FillStamina()
+{
+    CurrentStamina = MaxStamina;
+
+    if (PlayerHUD)
+    {
+        PlayerHUD->UpdateStamina(GetStaminaPercent());
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("DEBUG: Stamina rellenada"));
 }
 
 void AMyPlayerCharacter::ShowInventory()
@@ -729,6 +937,8 @@ void AMyPlayerCharacter::ShowInventory()
     }
 
     bInventoryOpen = true;
+
+    UGameplayStatics::SetGamePaused(GetWorld(), true);
 
     FInputModeGameAndUI Mode;
     Mode.SetHideCursorDuringCapture(false);
@@ -755,9 +965,28 @@ void AMyPlayerCharacter::HideInventory()
 
     bInventoryOpen = false;
 
+    UGameplayStatics::SetGamePaused(GetWorld(), false);
+
     FInputModeGameOnly Mode;
     PC->SetInputMode(Mode);
     PC->bShowMouseCursor = false;
+}
+
+bool AMyPlayerCharacter::IsSprintUnlocked() const
+{
+    return bSprintUnlocked;
+}
+
+void AMyPlayerCharacter::UnlockSprint()
+{
+    bSprintUnlocked = true;
+
+    if (PlayerHUD)
+    {
+        PlayerHUD->SetStaminaVisibility(true);
+    }
+
+    ShowHintMessage(TEXT("Usa Shift para poder correr"));
 }
 
 void AMyPlayerCharacter::RefreshLegacyCarryFromInventory()

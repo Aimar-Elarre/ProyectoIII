@@ -1,5 +1,6 @@
 #include "MyPlayerHUD.h"
-#include "Styling/SlateColor.h"
+#include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 #include "Math/UnrealMathUtility.h"
 
 void UMyPlayerHUD::UpdateStamina(float Percent)
@@ -7,6 +8,16 @@ void UMyPlayerHUD::UpdateStamina(float Percent)
     if (StaminaBar)
     {
         StaminaBar->SetPercent(Percent);
+    }
+}
+
+void UMyPlayerHUD::SetStaminaVisibility(bool bVisible)
+{
+    ESlateVisibility NewVisibility = bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed;
+
+    if (StaminaBar)
+    {
+        StaminaBar->SetVisibility(NewVisibility);
     }
 }
 

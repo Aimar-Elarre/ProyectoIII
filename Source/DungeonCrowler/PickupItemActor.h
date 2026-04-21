@@ -8,6 +8,7 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class USoundBase;
 class UItemData;
+class AMyPlayerCharacter;
 
 UCLASS()
 class DUNGEONCROWLER_API APickupItemActor : public AActor
@@ -22,6 +23,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Inventory")
     const UItemData* GetItemData() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Pickup")
+    void TryPickup(AMyPlayerCharacter* Player);
 
 protected:
     virtual void BeginPlay() override;
@@ -46,5 +50,13 @@ protected:
         int32 OtherBodyIndex,
         bool bFromSweep,
         const FHitResult& SweepResult
+    );
+
+    UFUNCTION()
+    void OnOverlapEnd(
+        UPrimitiveComponent* OverlappedComp,
+        AActor* OtherActor,
+        UPrimitiveComponent* OtherComp,
+        int32 OtherBodyIndex
     );
 };

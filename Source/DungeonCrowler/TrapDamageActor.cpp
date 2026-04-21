@@ -35,7 +35,7 @@ void ATrapDamageActor::OnOverlapBegin(
 
 	if (Player)
 	{
-		Player->TakeDamageCustom(Damage);
+		Player->KillPlayer();
 
 		if (TrapSound)
 		{

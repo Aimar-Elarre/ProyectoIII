@@ -15,6 +15,7 @@ APickupItemActor::APickupItemActor()
 	SetRootComponent(Trigger);
 
 	Trigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Trigger->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Trigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
@@ -34,7 +35,9 @@ const UItemData* APickupItemActor::GetItemData() const
 void APickupItemActor::BeginPlay()
 {
 	Super::BeginPlay();
+
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &APickupItemActor::OnOverlapBegin);
+	Trigger->OnComponentEndOverlap.AddDynamic(this, &APickupItemActor::OnOverlapEnd);
 }
 
 void APickupItemActor::OnOverlapBegin(
@@ -46,8 +49,24 @@ void APickupItemActor::OnOverlapBegin(
 	const FHitResult& SweepResult
 )
 {
-	if (!OtherActor) return;
+	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
+	if (!Player) return;
 
+	if (!Player->IsInventoryUnlocked())
+	{
+		return;
+	}
+
+	Player->SetNearbyPickup(this);
+}
+
+void APickupItemActor::OnOverlapEnd(
+	UPrimitiveComponent* OverlappedComp,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex
+)
+{
 	AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
 	if (!Player)
 	{
@@ -55,44 +74,35 @@ void APickupItemActor::OnOverlapBegin(
 		return;
 	}
 
-	// ===== BREAKPOINT: Aquí entra cuando el jugador toca un pickup =====
-	if (ItemData && Player->InventoryComponent)
+	Player->ClearNearbyPickup(this);
+}
+
+void APickupItemActor::TryPickup(AMyPlayerCharacter* Player)
+{
+	if (!Player) return;
+	if (!ItemData) return;
+	if (!Player->InventoryComponent) return;
+	if (!Player->IsInventoryUnlocked()) return;
+
+	const bool bAdded = Player->InventoryComponent->AddItem(ItemData, 1);
+	if (!bAdded)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Item tocado: %s"), *ItemData->GetName());
-		
-		bool bAdded = Player->InventoryComponent->AddItem(ItemData, 1);
-		if (!bAdded)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[PICKUP] ¡No se pudo añadir al inventario! Peso máximo alcanzado"));
-			return;
-		}
-		
-		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Item añadido al inventario correctamente"));
+		UE_LOG(LogTemp, Warning, TEXT("No se pudo añadir al inventario"));
+		return;
 	}
 
-	Player->AddCarriedItem(1);
-
-	// Añadir dinero del item al jugador
-	if (ItemData && ItemData->MoneyValue > 0.f)
-	{
-		Player->AddMoney(ItemData->MoneyValue);
-		
-		// ===== BREAKPOINT: Confirmar adición de dinero =====
-		float NewMoney = Player->GetCurrentMoney();
-		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Dinero añadido: +%.2f | Dinero total ahora: %.2f"), 
-			ItemData->MoneyValue, NewMoney);
-	}
-	else if (ItemData)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[PICKUP] Item sin valor monetario: %s (MoneyValue = %.2f)"), 
-			*ItemData->GetName(), ItemData ? ItemData->MoneyValue : 0.0f);
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Objeto recogido. Total: %d"), Player->GetItemsCarried());
+	Player->ClearNearbyPickup(this);
 
 	if (PickupSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, PickupSound, GetActorLocation());
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Objeto recogido: %s"), *ItemData->DisplayName.ToString());
+	// Añadir dinero del item al jugador
+	if (ItemData && ItemData->MoneyValue > 0.f)
+	{
+		Player->AddMoney(ItemData->MoneyValue);
 	}
 
 	Destroy();

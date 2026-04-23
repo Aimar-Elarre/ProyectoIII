@@ -103,6 +103,9 @@ void AMyPlayerCharacter::BeginPlay()
 
     RefreshLegacyCarryFromInventory();
     UpdateMovementSpeed();
+
+    // Desbloquear inventario para poder recoger objetos
+    UnlockInventory();
 }
 
 void AMyPlayerCharacter::Tick(float DeltaTime)
@@ -752,7 +755,8 @@ void AMyPlayerCharacter::DropItem()
         return;
     }
 
-    const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
+    // Spawn location: desde el centro del personaje hacia adelante (como Fortnite)
+    const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 50.f + FVector(0.f, 0.f, 50.f);
     const FRotator SpawnRotation = FRotator::ZeroRotator;
 
     FActorSpawnParameters SpawnParams;
@@ -772,6 +776,10 @@ void AMyPlayerCharacter::DropItem()
     }
 
     SpawnedPickup->SetItemData(Entry.ItemData);
+
+    // Dar velocidad inicial hacia adelante (como si saliera del cuerpo)
+    const FVector LaunchVelocity = GetActorForwardVector() * 300.f + FVector(0.f, 0.f, 100.f);
+    SpawnedPickup->GetRootComponent()->ComponentVelocity = LaunchVelocity;
 
     InventoryComponent->RemoveItem(Entry.ItemData, 1);
     RefreshLegacyCarryFromInventory();

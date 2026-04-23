@@ -29,6 +29,7 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickup")
     UBoxComponent* Trigger;
@@ -41,6 +42,17 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
     TObjectPtr<const UItemData> ItemData = nullptr;
+
+    // Oscilación
+    UPROPERTY(EditAnywhere, Category = "Animation")
+    float OscillationHeight = 20.f;
+
+    UPROPERTY(EditAnywhere, Category = "Animation")
+    float OscillationSpeed = 2.f;
+
+private:
+    FVector BaseLocation;
+    float OscillationTime = 0.f;
 
     UFUNCTION()
     void OnOverlapBegin(

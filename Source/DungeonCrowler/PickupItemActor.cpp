@@ -9,7 +9,7 @@
 
 APickupItemActor::APickupItemActor()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	Trigger = CreateDefaultSubobject<UBoxComponent>(TEXT("Trigger"));
 	SetRootComponent(Trigger);
@@ -36,8 +36,25 @@ void APickupItemActor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Guardar la posición base para la oscilación
+	BaseLocation = GetActorLocation();
+
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &APickupItemActor::OnOverlapBegin);
 	Trigger->OnComponentEndOverlap.AddDynamic(this, &APickupItemActor::OnOverlapEnd);
+}
+
+void APickupItemActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Oscilación de arriba hacia abajo
+	OscillationTime += DeltaTime * OscillationSpeed;
+	float OffsetZ = FMath::Sin(OscillationTime) * OscillationHeight;
+
+	FVector NewLocation = BaseLocation;
+	NewLocation.Z += OffsetZ;
+
+	SetActorLocation(NewLocation);
 }
 
 void APickupItemActor::OnOverlapBegin(

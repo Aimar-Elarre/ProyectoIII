@@ -11,6 +11,8 @@
 #include "InventoryWidget.h"
 #include "ItemData.h"
 #include "Perception/AISense_Hearing.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -287,49 +289,119 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    PlayerInputComponent->BindAxis("MoveForward", this, &AMyPlayerCharacter::MoveForward);
-    PlayerInputComponent->BindAxis("MoveRight", this, &AMyPlayerCharacter::MoveRight);
-    PlayerInputComponent->BindAxis("Turn", this, &AMyPlayerCharacter::Turn);
-    PlayerInputComponent->BindAxis("LookUp", this, &AMyPlayerCharacter::LookUp);
+    if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+    {
+        if (InputMappingContext)
+        {
+            EnhancedInputComponent->AddMappingContext(InputMappingContext, 0);
+        }
 
-    PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyPlayerCharacter::StartJump);
-    PlayerInputComponent->BindAction("Jump", IE_Released, this, &AMyPlayerCharacter::StopJump);
+        if (MoveAction)
+        {
+            EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMyPlayerCharacter::Move);
+        }
 
-    PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AMyPlayerCharacter::StartRun);
-    PlayerInputComponent->BindAction("Run", IE_Released, this, &AMyPlayerCharacter::StopRun);
+        if (LookAction)
+        {
+            EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMyPlayerCharacter::Look);
+        }
 
-    PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AMyPlayerCharacter::StartCrouch);
-    PlayerInputComponent->BindAction("Crouch", IE_Released, this, &AMyPlayerCharacter::StopCrouch);
+        if (JumpAction)
+        {
+            EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AMyPlayerCharacter::StartJump);
+            EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AMyPlayerCharacter::StopJump);
+        }
 
-    PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
-    PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
-    PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
-    PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
+        if (RunAction)
+        {
+            EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Started, this, &AMyPlayerCharacter::StartRun);
+            EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AMyPlayerCharacter::StopRun);
+        }
 
-    PlayerInputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
-    PlayerInputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockDash);
-    PlayerInputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AMyPlayerCharacter::Debug_FillStamina);
+        if (CrouchAction)
+        {
+            EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMyPlayerCharacter::StartCrouch);
+            EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AMyPlayerCharacter::StopCrouch);
+        }
 
-    FInputActionBinding& InventoryBinding =
-        PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
+        if (DashAction)
+        {
+            EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &AMyPlayerCharacter::Dash);
+        }
 
-    InventoryBinding.bExecuteWhenPaused = true;
+        if (InventoryAction)
+        {
+            EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
+        }
+
+        if (PickupAction)
+        {
+            EnhancedInputComponent->BindAction(PickupAction, ETriggerEvent::Started, this, &AMyPlayerCharacter::TryInteractPickup);
+        }
+
+        if (DropAction)
+        {
+            EnhancedInputComponent->BindAction(DropAction, ETriggerEvent::Started, this, &AMyPlayerCharacter::DropItem);
+        }
+    }
+    else
+    {
+        // Fallback para el sistema de input legacy
+        PlayerInputComponent->BindAxis("MoveForward", this, &AMyPlayerCharacter::MoveForward);
+        PlayerInputComponent->BindAxis("MoveRight", this, &AMyPlayerCharacter::MoveRight);
+        PlayerInputComponent->BindAxis("Turn", this, &AMyPlayerCharacter::Turn);
+        PlayerInputComponent->BindAxis("LookUp", this, &AMyPlayerCharacter::LookUp);
+
+        PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyPlayerCharacter::StartJump);
+        PlayerInputComponent->BindAction("Jump", IE_Released, this, &AMyPlayerCharacter::StopJump);
+
+        PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AMyPlayerCharacter::StartRun);
+        PlayerInputComponent->BindAction("Run", IE_Released, this, &AMyPlayerCharacter::StopRun);
+
+        PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AMyPlayerCharacter::StartCrouch);
+        PlayerInputComponent->BindAction("Crouch", IE_Released, this, &AMyPlayerCharacter::StopCrouch);
+
+        PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
+        PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
+        PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+        PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
+
+        PlayerInputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
+        PlayerInputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockDash);
+        PlayerInputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AMyPlayerCharacter::Debug_FillStamina);
+
+        FInputActionBinding& InventoryBinding =
+            PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyPlayerCharacter::Input_Inventory_Toggle);
+
+        InventoryBinding.bExecuteWhenPaused = true;
+    }
 }
 
-void AMyPlayerCharacter::MoveForward(float Value)
+void AMyPlayerCharacter::Move(const FInputActionValue& Value)
 {
-    UpdateFootstepAudio(Value);
+    FVector2D MovementVector = Value.Get<FVector2D>();
 
-    if (Controller && Value != 0.0f)
+    if (Controller != nullptr)
     {
-        const FRotator ControlRot = Controller->GetControlRotation();
-        const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
+        // Movimiento forward/backward
+        MoveForward(MovementVector.Y);
 
-        const FVector ForwardDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
-        AddMovementInput(ForwardDir, Value);
+        // Movimiento right/left
+        MoveRight(MovementVector.X);
+    }
+}
 
-        const float Loudness = bIsRunning ? 0.8f : 0.4f;
-        MakeMovementNoise(Loudness);
+void AMyPlayerCharacter::Look(const FInputActionValue& Value)
+{
+    FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+    if (Controller != nullptr)
+    {
+        // Rotación horizontal (yaw)
+        Turn(LookAxisVector.X);
+
+        // Rotación vertical (pitch)
+        LookUp(LookAxisVector.Y);
     }
 }
 

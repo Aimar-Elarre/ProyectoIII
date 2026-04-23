@@ -10,6 +10,8 @@
 #include "Components/AudioComponent.h"
 #include "MyPlayerHUD.h"
 #include "InventoryComponent.h"
+#include "InputMappingContext.h"
+#include "InputAction.h"
 #include "MyPlayerCharacter.generated.h"
 
 class APickupItemActor;
@@ -36,6 +38,8 @@ public:
     // Movimiento
     void MoveForward(float Value);
     void MoveRight(float Value);
+    void Move(const FInputActionValue& Value);
+    void Look(const FInputActionValue& Value);
     void StartRun();
     void StopRun();
     void StartJump();
@@ -314,11 +318,35 @@ public:
     UPROPERTY(EditAnywhere, Category = "Audio")
     TObjectPtr<USoundBase> DashSound = nullptr;
 
-    UPROPERTY(VisibleAnywhere, Category = "Audio")
-    TObjectPtr<UAudioComponent> FootstepAudioComponent = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputMappingContext> InputMappingContext = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    float WalkStepInterval = 0.5f;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> MoveAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> LookAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> JumpAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> RunAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> CrouchAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> DashAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> InventoryAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> PickupAction = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> DropAction = nullptr;
 
     UPROPERTY(EditAnywhere, Category = "Audio")
     float RunStepInterval = 0.3f;

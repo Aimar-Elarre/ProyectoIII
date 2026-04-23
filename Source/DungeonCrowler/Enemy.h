@@ -6,12 +6,11 @@
 
 class UItemData;
 
-// Estado del enemigo para determinar si persigue al jugador
 UENUM(BlueprintType)
 enum class EEnemyState : uint8
 {
-    Inactive UMETA(DisplayName = "Inactivo"),
-    Active UMETA(DisplayName = "Activo - Persiguiendo")
+    Inactive UMETA(DisplayName = "Inactive"),
+    Active UMETA(DisplayName = "Active")
 };
 
 UCLASS()
@@ -24,35 +23,35 @@ public:
 
 protected:
     virtual void BeginPlay() override;
-    FVector InitialLocation;
-    FRotator InitialRotation;
 
 public:
     virtual void Tick(float DeltaTime) override;
 
     UPROPERTY(EditAnywhere, Category = "Chase")
-    AActor* TargetActor;
+    AActor* TargetActor = nullptr;
 
     UPROPERTY(EditAnywhere, Category = "Chase")
     float KillDistance = 200.f;
 
-    // ====== ACTIVACIÓN DEL ENEMIGO ======
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Activation")
+    float ActivationMoneyThreshold = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Activation")
+    TObjectPtr<UItemData> TriggerItem = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Activation")
     EEnemyState CurrentState = EEnemyState::Inactive;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Activation", meta = (ClampMin = "0.0"))
-    float ActivationMoneyThreshold = 100.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Activation")
-    TObjectPtr<UItemData> TriggerItem = nullptr;
+    UFUNCTION(BlueprintCallable, Category = "Activation")
+    void CheckActivationCondition();
 
     UFUNCTION(BlueprintCallable, Category = "Activation")
     void ActivateEnemy();
 
-    UFUNCTION(BlueprintCallable, Category = "Activation")
-    void CheckActivationCondition();
+protected:
+    UPROPERTY()
+    FVector InitialLocation = FVector::ZeroVector;
 
-    UFUNCTION(BlueprintPure, Category = "Activation")
-    bool IsActive() const { return CurrentState == EEnemyState::Active; }
+    UPROPERTY()
+    FRotator InitialRotation = FRotator::ZeroRotator;
 };

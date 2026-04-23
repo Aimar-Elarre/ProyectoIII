@@ -13,6 +13,8 @@
 #include "Perception/AISense_Hearing.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
+#include "InputAction.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -50,7 +52,6 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     FootstepAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FootstepAudioComponent"));
     FootstepAudioComponent->SetupAttachment(RootComponent);
     FootstepAudioComponent->bAutoActivate = false;
-    FootstepAudioComponent->bIsUISound = false;
 
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
@@ -293,7 +294,16 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     {
         if (InputMappingContext)
         {
-            EnhancedInputComponent->AddMappingContext(InputMappingContext, 0);
+            if (APlayerController* PC = Cast<APlayerController>(GetController()))
+            {
+                if (ULocalPlayer* LocalPlayer = PC->GetLocalPlayer())
+                {
+                    if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+                    {
+                        Subsystem->AddMappingContext(InputMappingContext, 0);
+                    }
+                }
+            }
         }
 
         if (MoveAction)
@@ -402,6 +412,23 @@ void AMyPlayerCharacter::Look(const FInputActionValue& Value)
 
         // Rotación vertical (pitch)
         LookUp(LookAxisVector.Y);
+    }
+}
+
+void AMyPlayerCharacter::MoveForward(float Value)
+{
+    UpdateFootstepAudio(Value);
+
+    if (Controller && Value != 0.0f)
+    {
+        const FRotator ControlRot = Controller->GetControlRotation();
+        const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
+
+        const FVector ForwardDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
+        AddMovementInput(ForwardDir, Value);
+
+        const float Loudness = bIsRunning ? 0.8f : 0.4f;
+        MakeMovementNoise(Loudness);
     }
 }
 

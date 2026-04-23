@@ -318,6 +318,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Audio")
     TObjectPtr<USoundBase> DashSound = nullptr;
 
+    UPROPERTY(VisibleAnywhere, Category = "Audio")
+    TObjectPtr<UAudioComponent> FootstepAudioComponent = nullptr;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     TObjectPtr<UInputMappingContext> InputMappingContext = nullptr;
 

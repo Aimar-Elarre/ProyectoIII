@@ -92,6 +92,8 @@ void AFireTrapActor::SpawnFireProjectile()
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    SpawnParams.Owner = this;
+    SpawnParams.Instigator = GetInstigator();
 
     AActor* Projectile = GetWorld()->SpawnActor<AActor>(
         FireProjectileClass,
@@ -102,7 +104,6 @@ void AFireTrapActor::SpawnFireProjectile()
 
     if (Projectile)
     {
-        // Guardar el da�o en el proyectil si tiene la variable expuesta
         Projectile->Tags.Add(FName(*FString::Printf(TEXT("FireDamage_%.0f"), FireDamage)));
     }
 }
@@ -111,6 +112,7 @@ void AFireTrapActor::OnActivationBeginOverlap(UPrimitiveComponent* OverlappedCom
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
+    UE_LOG(LogTemp, Warning, TEXT("FireTrap: Overlap detectado con %s"), OtherActor ? *OtherActor->GetName() : TEXT("null"));
     if (!OtherActor || !Cast<ACharacter>(OtherActor)) return;
 
     bPlayerInRange = true;
@@ -125,6 +127,7 @@ void AFireTrapActor::OnActivationEndOverlap(UPrimitiveComponent* OverlappedComp,
     bPlayerInRange = false;
     StopFiring();
 }
+
 void AFireTrapActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);

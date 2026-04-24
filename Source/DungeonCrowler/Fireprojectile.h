@@ -28,7 +28,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
     UProjectileMovementComponent* ProjectileMovement;
 
-    // Daño que hace — se puede sobreescribir desde FireTrapActor
+    // Daï¿½o que hace ï¿½ se puede sobreescribir desde FireTrapActor
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
     float Damage = 25.f;
 
@@ -41,8 +41,8 @@ public:
     float Speed = 800.f;
 
 private:
-    UFUNCTION()
-    void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
-        UPrimitiveComponent* OtherComp, FVector NormalImpulse,
-        const FHitResult& Hit);
+UFUNCTION()
+void OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+    bool bFromSweep, const FHitResult& SweepResult);
 };

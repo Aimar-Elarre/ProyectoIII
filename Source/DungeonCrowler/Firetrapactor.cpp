@@ -102,7 +102,7 @@ void AFireTrapActor::SpawnFireProjectile()
 
     if (Projectile)
     {
-        // Guardar el daño en el proyectil si tiene la variable expuesta
+        // Guardar el daï¿½o en el proyectil si tiene la variable expuesta
         Projectile->Tags.Add(FName(*FString::Printf(TEXT("FireDamage_%.0f"), FireDamage)));
     }
 }
@@ -124,4 +124,8 @@ void AFireTrapActor::OnActivationEndOverlap(UPrimitiveComponent* OverlappedComp,
 
     bPlayerInRange = false;
     StopFiring();
+}
+void AFireTrapActor::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
 }

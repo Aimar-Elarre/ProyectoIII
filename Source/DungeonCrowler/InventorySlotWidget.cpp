@@ -70,6 +70,11 @@ void UInventorySlotWidget::OnDropClicked()
         return;
     }
 
+    if (ClickSound)
+    {
+        UGameplayStatics::PlaySound2D(GetWorld(), ClickSound);
+    }
+
     AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
     if (!Player)
     {

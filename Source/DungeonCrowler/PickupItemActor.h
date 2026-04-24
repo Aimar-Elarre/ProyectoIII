@@ -27,6 +27,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Pickup")
     void TryPickup(AMyPlayerCharacter* Player);
 
+    // Lanza el objeto con física al soltarlo (estilo Fortnite)
+    UFUNCTION(BlueprintCallable, Category = "Pickup")
+    void SpawnAsDropped(FVector LaunchVelocity);
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -53,6 +57,11 @@ protected:
 private:
     FVector BaseLocation;
     float OscillationTime = 0.f;
+
+    bool bIsInPhysicsMode = false;
+    FTimerHandle PhysicsSettleTimer;
+
+    void OnPhysicsSettle();
 
     UFUNCTION()
     void OnOverlapBegin(

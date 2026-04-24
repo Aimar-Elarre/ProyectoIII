@@ -16,6 +16,7 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    virtual void OnConstruction(const FTransform& Transform) override;
 
 public:
     virtual void Tick(float DeltaTime) override;
@@ -24,15 +25,15 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Platform")
     UStaticMeshComponent* PlatformMesh;
 
-    // TRIGGER — activa cuando el jugador está encima
+    // TRIGGER â€” activa cuando el jugador estÃ¡ encima
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Platform")
     UBoxComponent* StandTrigger;
 
-    // TRIGGER — activa cuando el jugador está cerca
+    // TRIGGER â€” activa cuando el jugador estÃ¡ cerca
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Platform")
     UBoxComponent* ProximityTrigger;
 
-    // DIRECCION — activa/desactiva cada eje
+    // DIRECCION â€” activa/desactiva cada eje
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     bool bMoveX = false;
 
@@ -42,7 +43,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     bool bMoveZ = true;
 
-    // Dirección positiva o negativa en cada eje
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     float DirectionX = 1.f;
 
@@ -52,29 +52,29 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     float DirectionZ = 1.f;
 
-    // Velocidad de movimiento
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     float MoveSpeed = 200.f;
 
-    // Distancia máxima que recorre
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     float MoveDistance = 300.f;
 
-    // Tiempo de espera en el destino antes de volver
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     float WaitTimeAtDestination = 1.f;
 
-    // Vuelve automáticamente a la posición original
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Movement")
     bool bReturnToOrigin = true;
 
-    // Radio del trigger de proximidad
+    // TamaÃ±o del trigger de proximidad â€” editable y visible en editor
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Trigger")
     FVector ProximityTriggerSize = FVector(300.f, 300.f, 100.f);
 
-    // Tamaño del trigger de encima
+    // TamaÃ±o del trigger de encima â€” editable y visible en editor
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Trigger")
     FVector StandTriggerSize = FVector(150.f, 150.f, 50.f);
+
+    // Offset del StandTrigger sobre la plataforma
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Platform|Trigger")
+    FVector StandTriggerOffset = FVector(0.f, 0.f, 50.f);
 
 private:
     FVector OriginLocation;
@@ -89,6 +89,7 @@ private:
 
     void StartMoving();
     void StopWaiting();
+    void UpdateTriggerSizes();
 
     UFUNCTION()
     void OnStandBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,

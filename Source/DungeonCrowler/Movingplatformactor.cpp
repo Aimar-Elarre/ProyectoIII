@@ -16,12 +16,34 @@ AMovingPlatformActor::AMovingPlatformActor()
     StandTrigger->SetCollisionResponseToAllChannels(ECR_Ignore);
     StandTrigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
     StandTrigger->SetRelativeLocation(FVector(0.f, 0.f, 50.f));
+    StandTrigger->SetBoxExtent(FVector(150.f, 150.f, 50.f));
 
     ProximityTrigger = CreateDefaultSubobject<UBoxComponent>(TEXT("ProximityTrigger"));
     ProximityTrigger->SetupAttachment(PlatformMesh);
     ProximityTrigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     ProximityTrigger->SetCollisionResponseToAllChannels(ECR_Ignore);
     ProximityTrigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+    ProximityTrigger->SetBoxExtent(FVector(300.f, 300.f, 100.f));
+}
+
+void AMovingPlatformActor::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+    UpdateTriggerSizes();
+}
+
+void AMovingPlatformActor::UpdateTriggerSizes()
+{
+    if (StandTrigger)
+    {
+        StandTrigger->SetBoxExtent(StandTriggerSize);
+        StandTrigger->SetRelativeLocation(StandTriggerOffset);
+    }
+
+    if (ProximityTrigger)
+    {
+        ProximityTrigger->SetBoxExtent(ProximityTriggerSize);
+    }
 }
 
 void AMovingPlatformActor::BeginPlay()
@@ -38,8 +60,7 @@ void AMovingPlatformActor::BeginPlay()
 
     TargetLocation = OriginLocation + Direction * MoveDistance;
 
-    StandTrigger->SetBoxExtent(StandTriggerSize);
-    ProximityTrigger->SetBoxExtent(ProximityTriggerSize);
+    UpdateTriggerSizes();
 
     StandTrigger->OnComponentBeginOverlap.AddDynamic(this, &AMovingPlatformActor::OnStandBeginOverlap);
     StandTrigger->OnComponentEndOverlap.AddDynamic(this, &AMovingPlatformActor::OnStandEndOverlap);
@@ -86,11 +107,9 @@ void AMovingPlatformActor::Tick(float DeltaTime)
         }
         else
         {
-            // Ha vuelto al origen
             bIsMoving = false;
             bMovingForward = true;
 
-            // Si el jugador sigue cerca, vuelve a moverse
             if (bPlayerNearby)
             {
                 StartMoving();
@@ -116,8 +135,7 @@ void AMovingPlatformActor::OnStandBeginOverlap(UPrimitiveComponent* OverlappedCo
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (!OtherActor) return;
-    if (!Cast<ACharacter>(OtherActor)) return;
+    if (!OtherActor || !Cast<ACharacter>(OtherActor)) return;
 
     bPlayerNearby = true;
 
@@ -130,15 +148,14 @@ void AMovingPlatformActor::OnStandBeginOverlap(UPrimitiveComponent* OverlappedCo
 void AMovingPlatformActor::OnStandEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    // No paramos aquí — dejamos que termine el ciclo
+    // No paramos aquÃ­ â€” dejamos que termine el ciclo
 }
 
 void AMovingPlatformActor::OnProximityBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (!OtherActor) return;
-    if (!Cast<ACharacter>(OtherActor)) return;
+    if (!OtherActor || !Cast<ACharacter>(OtherActor)) return;
 
     bPlayerNearby = true;
 
@@ -151,8 +168,7 @@ void AMovingPlatformActor::OnProximityBeginOverlap(UPrimitiveComponent* Overlapp
 void AMovingPlatformActor::OnProximityEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    if (!OtherActor) return;
-    if (!Cast<ACharacter>(OtherActor)) return;
+    if (!OtherActor || !Cast<ACharacter>(OtherActor)) return;
 
     bPlayerNearby = false;
 }

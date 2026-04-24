@@ -10,17 +10,19 @@ AFireProjectile::AFireProjectile()
     SetRootComponent(CollisionSphere);
     CollisionSphere->SetSphereRadius(20.f);
     CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-    CollisionSphere->SetCollisionResponseToAllChannels(ECR_Block);
+    CollisionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
     CollisionSphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+    CollisionSphere->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
     CollisionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+    CollisionSphere->SetMobility(EComponentMobility::Movable);
 
     ProjectileMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
     ProjectileMesh->SetupAttachment(CollisionSphere);
     ProjectileMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-    ProjectileMovement->InitialSpeed = 800.f;
-    ProjectileMovement->MaxSpeed = 800.f;
+    ProjectileMovement->InitialSpeed = 0.f;
+    ProjectileMovement->MaxSpeed = 2000.f;
     ProjectileMovement->bRotationFollowsVelocity = true;
     ProjectileMovement->bShouldBounce = false;
     ProjectileMovement->ProjectileGravityScale = 0.f;
@@ -30,12 +32,21 @@ void AFireProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
+    UE_LOG(LogTemp, Warning, TEXT("FireProjectile spawned, speed: %f"), Speed);
+
+    ProjectileMovement->SetUpdatedComponent(CollisionSphere);
+    ProjectileMovement->Velocity = -GetActorForwardVector() * Speed;
     ProjectileMovement->InitialSpeed = Speed;
     ProjectileMovement->MaxSpeed = Speed;
+    ProjectileMovement->Activate();
 
-    CollisionSphere->OnComponentHit.AddDynamic(this, &AFireProjectile::OnHit);
+    UE_LOG(LogTemp, Warning, TEXT("Proyectil forward vector: X=%f Y=%f Z=%f"), 
+    GetActorForwardVector().X, 
+    GetActorForwardVector().Y, 
+    GetActorForwardVector().Z);
 
-    // Leer daño desde el tag si lo tiene
+    CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AFireProjectile::OnProjectileOverlap);
+
     for (const FName& Tag : Tags)
     {
         FString TagStr = Tag.ToString();
@@ -47,20 +58,20 @@ void AFireProjectile::BeginPlay()
         }
     }
 
-    // Autodestruirse después de Lifetime segundos
     SetLifeSpan(Lifetime);
 }
 
-void AFireProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor,
-    UPrimitiveComponent* OtherComp, FVector NormalImpulse,
-    const FHitResult& Hit)
+void AFireProjectile::OnProjectileOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+    bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (!OtherActor) return;
+    UE_LOG(LogTemp, Warning, TEXT("Proyectil overlap con: %s"), OtherActor ? *OtherActor->GetName() : TEXT("null"));
+
+    if (!OtherActor || OtherActor == this || OtherActor == GetOwner()) return;
 
     if (AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor))
     {
         Player->TakeDamageCustom(Damage);
+        Destroy();
     }
-
-    Destroy();
 }

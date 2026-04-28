@@ -255,7 +255,7 @@ void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
         return;
     }
 
-    const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
+    const FVector SpawnLocation = GetActorLocation() + GetActorUpVector() * 50.f + GetActorForwardVector() * 60.f;
     const FRotator SpawnRotation = FRotator::ZeroRotator;
 
     FActorSpawnParameters SpawnParams;
@@ -275,6 +275,9 @@ void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
     }
 
     SpawnedPickup->SetItemData(ItemData);
+
+    const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
+    SpawnedPickup->SpawnAsDropped(DropImpulse);
 
     InventoryComponent->RemoveItem(ItemData, 1);
     RefreshLegacyCarryFromInventory();
@@ -352,6 +355,7 @@ void AMyPlayerCharacter::MoveRight(float Value)
         }
     }
 }
+
 void AMyPlayerCharacter::TryInteractPickup()
 {
     if (NearbyPickup)
@@ -378,7 +382,6 @@ void AMyPlayerCharacter::ClearNearbyPickup(APickupItemActor* PickupToClear)
         HideHintMessage();
     }
 }
-
 
 void AMyPlayerCharacter::StartJump()
 {
@@ -752,7 +755,7 @@ void AMyPlayerCharacter::DropItem()
         return;
     }
 
-    const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 40.f);
+    const FVector SpawnLocation = GetActorLocation() + GetActorUpVector() * 50.f + GetActorForwardVector() * 60.f;
     const FRotator SpawnRotation = FRotator::ZeroRotator;
 
     FActorSpawnParameters SpawnParams;
@@ -772,6 +775,9 @@ void AMyPlayerCharacter::DropItem()
     }
 
     SpawnedPickup->SetItemData(Entry.ItemData);
+
+    const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
+    SpawnedPickup->SpawnAsDropped(DropImpulse);
 
     InventoryComponent->RemoveItem(Entry.ItemData, 1);
     RefreshLegacyCarryFromInventory();

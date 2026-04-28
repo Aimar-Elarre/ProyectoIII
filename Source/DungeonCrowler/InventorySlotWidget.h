@@ -9,6 +9,7 @@ class UTextBlock;
 class UImage;
 class UButton;
 class UInventoryComponent;
+class USoundBase;
 
 UCLASS()
 class DUNGEONCROWLER_API UInventorySlotWidget : public UUserWidget
@@ -33,6 +34,9 @@ protected:
 
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UButton> DropButton;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Audio")
+    TObjectPtr<USoundBase> ClickSound = nullptr;
 
 private:
     UFUNCTION()

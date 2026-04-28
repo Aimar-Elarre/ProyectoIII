@@ -21,8 +21,8 @@ AFireProjectile::AFireProjectile()
     ProjectileMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-    ProjectileMovement->InitialSpeed = 0.f;
-    ProjectileMovement->MaxSpeed = 2000.f;
+    ProjectileMovement->InitialSpeed = 800.f;
+    ProjectileMovement->MaxSpeed = 800.f;
     ProjectileMovement->bRotationFollowsVelocity = true;
     ProjectileMovement->bShouldBounce = false;
     ProjectileMovement->ProjectileGravityScale = 0.f;
@@ -32,18 +32,8 @@ void AFireProjectile::BeginPlay()
 {
     Super::BeginPlay();
 
-    UE_LOG(LogTemp, Warning, TEXT("FireProjectile spawned, speed: %f"), Speed);
-
-    ProjectileMovement->SetUpdatedComponent(CollisionSphere);
-    ProjectileMovement->Velocity = -GetActorForwardVector() * Speed;
-    ProjectileMovement->InitialSpeed = Speed;
+    ProjectileMovement->Velocity = GetActorForwardVector() * Speed;
     ProjectileMovement->MaxSpeed = Speed;
-    ProjectileMovement->Activate();
-
-    UE_LOG(LogTemp, Warning, TEXT("Proyectil forward vector: X=%f Y=%f Z=%f"), 
-    GetActorForwardVector().X, 
-    GetActorForwardVector().Y, 
-    GetActorForwardVector().Z);
 
     CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AFireProjectile::OnProjectileOverlap);
 

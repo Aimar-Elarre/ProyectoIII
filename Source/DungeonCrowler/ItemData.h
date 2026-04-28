@@ -32,4 +32,8 @@ public:
 	//Qué actor se genera al soltar este objeto
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TSubclassOf<APickupItemActor> PickupActorClass;
+
+	// Escala del actor al soltarlo al suelo
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	FVector DroppedScale = FVector(1.f, 1.f, 1.f);
 };

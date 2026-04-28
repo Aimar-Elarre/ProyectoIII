@@ -66,6 +66,11 @@ void APickupItemActor::SpawnAsDropped(FVector LaunchVelocity)
 {
 	bIsInPhysicsMode = true;
 
+	if (ItemData)
+	{
+		SetActorScale3D(ItemData->DroppedScale);
+	}
+
 	Trigger->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	Trigger->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 	Trigger->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);

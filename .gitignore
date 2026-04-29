@@ -73,3 +73,5 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+.github/agents/DungeonCrowler-Senior-Dev.agent.md

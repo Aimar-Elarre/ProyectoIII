@@ -23,7 +23,7 @@ void AGameEventTrigger::BeginPlay()
     Super::BeginPlay();
 
     // Obtener referencia al GameEventManager singleton
-    EventManager = &UGameEventManager::Get();
+    EventManager = &UGameEventManager::Get(this);
 
     if (TriggerBox)
     {

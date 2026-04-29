@@ -2,14 +2,64 @@
 #include "MyPlayerCharacter.h"
 #include "InventoryComponent.h"
 #include "ItemData.h"
-#include "Kismet/GameplayStatics.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 
-UGameEventManager& UGameEventManager::Get()
+// Mapa estático de instancias por mundo
+TMap<UWorld*, UGameEventManager*> UGameEventManager::Instances;
+
+UGameEventManager::UGameEventManager()
 {
-    static UGameEventManager Instance;
-    return Instance;
+    bGameStarted = false;
+    bInitialized = false;
+    bEnemyActivated = false;
+    bGameEnded = false;
+}
+
+UGameEventManager::~UGameEventManager()
+{
+}
+
+UGameEventManager& UGameEventManager::Get(UObject* WorldContext)
+{
+    UWorld* World = GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::ReturnNull);
+    if (!World)
+    {
+        World = GEngine->GetCurrentPlayWorld();
+    }
+    
+    if (!World)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[GameEventManager] Get: No se pudo obtener el mundo"));
+        static UGameEventManager FallbackInstance;
+        return FallbackInstance;
+    }
+
+    // Buscar o crear instancia
+    UGameEventManager*& Instance = Instances.FindOrAdd(World);
+    if (!Instance)
+    {
+        Instance = NewObject<UGameEventManager>(World);
+        Instance->AddToRoot(); // Evitar que se recolecte por garbage
+        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] Get: Nueva instancia creada para mundo"));
+    }
+
+    return *Instance;
+}
+
+void UGameEventManager::Reset()
+{
+    bGameStarted = false;
+    bInitialized = false;
+    bEnemyActivated = false;
+    bGameEnded = false;
+    PlayerCharacter = nullptr;
+    if (CurrentWidget)
+    {
+        CurrentWidget->RemoveFromParent();
+        CurrentWidget = nullptr;
+    }
 }
 
 void UGameEventManager::Initialize(AMyPlayerCharacter* PlayerChar)
@@ -37,7 +87,7 @@ void UGameEventManager::CheckEnemyActivation()
 {
     if (!bInitialized || !PlayerCharacter)
     {
-        UE_LOG(LogTemp, Error, TEXT("[GameEventManager] CheckEnemyActivation: No inicializado"));
+        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] CheckEnemyActivation: No inicializado o sin jugador"));
         return;
     }
 
@@ -145,6 +195,17 @@ void UGameEventManager::ShowEventWidget(EGameEventType EventType)
         NewWidget->AddToViewport();
 
         UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] ShowEventWidget: Widget mostrado para evento %d"), (int32)EventType);
+
+        // Cambiar modo de input a UI
+        if (APlayerController* PC = PlayerCharacter->GetController<APlayerController>())
+        {
+            FInputModeGameAndUI InputMode;
+            InputMode.SetWidgetToFocus(NewWidget->TakeWidget());
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+            UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] ShowEventWidget: Modo de input cambiado a UI"));
+        }
     }
     else
     {

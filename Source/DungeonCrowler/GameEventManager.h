@@ -25,55 +25,74 @@ class DUNGEONCROWLER_API UGameEventManager : public UObject
     GENERATED_BODY()
 
 public:
-    static UGameEventManager& Get();
+    // Obtener instancia singleton
+    static UGameEventManager& Get(UObject* WorldContext = nullptr);
 
     // Inicializar con el jugador
+    UFUNCTION(BlueprintCallable, Category = "Game Events")
     void Initialize(AMyPlayerCharacter* PlayerCharacter);
 
     // Verificar condiciones de activación del enemigo
+    UFUNCTION(BlueprintCallable, Category = "Game Events")
     void CheckEnemyActivation();
 
     // Mostrar widget de evento
+    UFUNCTION(BlueprintCallable, Category = "Game Events")
     void ShowEventWidget(EGameEventType EventType);
 
-    // Configuración desde Blueprint
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Events")
-    TSubclassOf<UUserWidget> StartWidgetClass;
+    // Reiniciar el manager
+    UFUNCTION(BlueprintCallable, Category = "Game Events")
+    void Reset();
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Events")
-    TSubclassOf<UUserWidget> EndWidgetClass;
-
+    // ==================== PROPIEDADES ====================
+    
     // Configuración de activación
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Events")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Events|Activation")
     float ActivationMoneyThreshold = 0.f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Events")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Events|Activation")
     TObjectPtr<UItemData> ActivationTriggerItem = nullptr;
+
+    // Widgets
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Events|Widgets")
+    TSubclassOf<UUserWidget> StartWidgetClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Events|Widgets")
+    TSubclassOf<UUserWidget> EndWidgetClass;
+
+    // Estado del juego
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events|State")
+    bool bGameStarted = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events|State")
+    bool bInitialized = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events|State")
+    bool bEnemyActivated = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events|State")
+    bool bGameEnded = false;
+
+    // Referencia al jugador
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events|State")
+    TObjectPtr<AMyPlayerCharacter> PlayerCharacter = nullptr;
+
+    // Widget actual
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events|State")
+    TObjectPtr<UUserWidget> CurrentWidget = nullptr;
 
     // Delegate para notificar eventos
     UPROPERTY(BlueprintAssignable, Category = "Game Events")
     FOnGameEventTriggered OnGameEventTriggered;
 
-    // Estado del juego
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events")
-    bool bGameStarted = false;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events")
-    bool bInitialized = false;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events")
-    bool bEnemyActivated = false;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Events")
-    bool bGameEnded = false;
-
 protected:
+    UGameEventManager();
+    virtual ~UGameEventManager() override;
+
+private:
     void CheckMoneyActivation();
     void CheckItemActivation();
 
-    UPROPERTY()
-    TObjectPtr<AMyPlayerCharacter> PlayerCharacter;
-
-    UPROPERTY()
-    TObjectPtr<UUserWidget> CurrentWidget;
+    // Mapa de instancias por mundo
+    static TMap<UWorld*, UGameEventManager*> Instances;
 };

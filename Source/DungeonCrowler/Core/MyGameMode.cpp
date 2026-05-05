@@ -1,5 +1,5 @@
 #include "MyGameMode.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 
 AMyGameMode::AMyGameMode()
 {

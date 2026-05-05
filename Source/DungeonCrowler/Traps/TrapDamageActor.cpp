@@ -2,7 +2,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 
 ATrapDamageActor::ATrapDamageActor()
 {

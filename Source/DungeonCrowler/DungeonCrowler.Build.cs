@@ -8,6 +8,19 @@ public class DungeonCrowler : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		// Include paths para las carpetas organizadas
+		PublicIncludePaths.AddRange(new string[]
+		{
+			System.IO.Path.Combine(ModuleDirectory),
+			System.IO.Path.Combine(ModuleDirectory, "Core"),
+			System.IO.Path.Combine(ModuleDirectory, "Player"),
+			System.IO.Path.Combine(ModuleDirectory, "Inventory"),
+			System.IO.Path.Combine(ModuleDirectory, "Enemies"),
+			System.IO.Path.Combine(ModuleDirectory, "Traps"),
+			System.IO.Path.Combine(ModuleDirectory, "Mechanics"),
+			System.IO.Path.Combine(ModuleDirectory, "Events")
+		});
+
         PublicDependencyModuleNames.AddRange(
             new string[]
             {

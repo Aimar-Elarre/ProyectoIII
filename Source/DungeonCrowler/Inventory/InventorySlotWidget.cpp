@@ -4,7 +4,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "ItemData.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "InventoryComponent.h"
 

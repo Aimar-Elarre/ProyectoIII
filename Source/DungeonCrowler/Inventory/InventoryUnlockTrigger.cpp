@@ -1,9 +1,9 @@
-#include "SprintUnlockTrigger.h"
+#include "InventoryUnlockTrigger.h"
 
 #include "Components/BoxComponent.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 
-ASprintUnlockTrigger::ASprintUnlockTrigger()
+AInventoryUnlockTrigger::AInventoryUnlockTrigger()
 {
     PrimaryActorTick.bCanEverTick = false;
 
@@ -15,17 +15,17 @@ ASprintUnlockTrigger::ASprintUnlockTrigger()
     TriggerBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 }
 
-void ASprintUnlockTrigger::BeginPlay()
+void AInventoryUnlockTrigger::BeginPlay()
 {
     Super::BeginPlay();
 
     if (TriggerBox)
     {
-        TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &ASprintUnlockTrigger::OnOverlapBegin);
+        TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &AInventoryUnlockTrigger::OnOverlapBegin);
     }
 }
 
-void ASprintUnlockTrigger::OnOverlapBegin(
+void AInventoryUnlockTrigger::OnOverlapBegin(
     UPrimitiveComponent* OverlappedComp,
     AActor* OtherActor,
     UPrimitiveComponent* OtherComp,
@@ -40,9 +40,9 @@ void ASprintUnlockTrigger::OnOverlapBegin(
         return;
     }
 
-    if (!Player->IsSprintUnlocked())
+    if (!Player->IsInventoryUnlocked())
     {
-        Player->UnlockSprint();
+        Player->UnlockInventory();
     }
 
     Destroy();

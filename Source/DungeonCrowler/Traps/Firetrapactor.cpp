@@ -3,7 +3,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 
 AFireTrapActor::AFireTrapActor()
 {

@@ -1,6 +1,6 @@
 #include "GameEventConfig.h"
 #include "GameEventManager.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 
 AGameEventConfig::AGameEventConfig()
 {

@@ -3,13 +3,13 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "PickupItemActor.h"
+#include "../Inventory/PickupItemActor.h"
 #include "Engine/Engine.h"
 #include "TimerManager.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
-#include "InventoryWidget.h"
-#include "ItemData.h"
+#include "../Inventory/InventoryWidget.h"
+#include "../Inventory/ItemData.h"
 #include "Perception/AISense_Hearing.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()

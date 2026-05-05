@@ -1,7 +1,7 @@
 #include "GameEventTrigger.h"
 #include "GameEventManager.h"
 #include "Components/BoxComponent.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"

@@ -8,8 +8,8 @@
 #include "TimerManager.h"
 #include "Sound/SoundBase.h"
 #include "Components/AudioComponent.h"
-#include "MyPlayerHUD.h"
-#include "InventoryComponent.h"
+#include "../Core/MyPlayerHUD.h"
+#include "../Inventory/InventoryComponent.h"
 #include "MyPlayerCharacter.generated.h"
 
 class APickupItemActor;

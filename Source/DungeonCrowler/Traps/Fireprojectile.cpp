@@ -1,5 +1,5 @@
 #include "FireProjectile.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 #include "TimerManager.h"
 
 AFireProjectile::AFireProjectile()

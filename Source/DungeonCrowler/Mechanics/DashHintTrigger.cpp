@@ -1,5 +1,5 @@
 #include "DashHintTrigger.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 
 ADashHintTrigger::ADashHintTrigger()
 {

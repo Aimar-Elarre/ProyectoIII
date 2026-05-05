@@ -1,9 +1,9 @@
 #include "Enemy.h"
 #include "AIController.h"
 #include "Kismet/GameplayStatics.h"
-#include "MyPlayerCharacter.h"
-#include "InventoryComponent.h"
-#include "ItemData.h"
+#include "../Player/MyPlayerCharacter.h"
+#include "../Inventory/InventoryComponent.h"
+#include "../Inventory/ItemData.h"
 
 AEnemy::AEnemy()
 {

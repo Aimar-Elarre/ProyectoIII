@@ -1,5 +1,5 @@
 #include "Checkpoint.h"
-#include "MyPlayerCharacter.h"
+#include "../Player/MyPlayerCharacter.h"
 
 ACheckpoint::ACheckpoint()
 {

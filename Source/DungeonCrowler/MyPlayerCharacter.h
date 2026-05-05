@@ -329,6 +329,8 @@ public:
     float LastFootstepTime = 0.f;
     float FootstepBlockedUntil = 0.f;
 
+    FTransform InitialMeshRelativeTransform;
+
 private:
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UUserWidget> InventoryWidgetClass;

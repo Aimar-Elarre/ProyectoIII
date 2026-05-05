@@ -70,6 +70,8 @@ void AMyPlayerCharacter::BeginPlay()
 
         CurrentMeshScale = GetMesh()->GetRelativeScale3D();
         MeshStandingScale = CurrentMeshScale;
+
+        InitialMeshRelativeTransform = GetMesh()->GetRelativeTransform();
     }
 
     if (Camera)
@@ -660,6 +662,10 @@ void AMyPlayerCharacter::Die()
     StopFootstepAudio();
     GetCharacterMovement()->DisableMovement();
 
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+    GetMesh()->SetSimulatePhysics(true);
+
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
         DisableInput(PC);
@@ -718,6 +724,12 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
         return;
     }
 
+    GetMesh()->SetSimulatePhysics(false);
+    GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+    GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+    GetMesh()->SetRelativeTransform(InitialMeshRelativeTransform);
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
     SetActorLocation(LastCheckpointLocation);
 
     CurrentHealth = MaxHealth;
@@ -726,6 +738,9 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     bIsRunning = false;
     bIsSliding = false;
     bIsCrouching = false;
+
+    CurrentMeshZ = InitialMeshRelativeTransform.GetLocation().Z;
+    CurrentMeshScale = InitialMeshRelativeTransform.GetScale3D();
 
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->GroundFriction = OriginalGroundFriction;

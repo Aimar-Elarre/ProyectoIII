@@ -53,6 +53,8 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     DashNiagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("DashNiagara"));
     DashNiagara->SetupAttachment(RootComponent);
     DashNiagara->bAutoActivate = false;
+    DashNiagara->SetAutoActivate(false);
+    DashNiagara->SetVisibility(false, true);
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
@@ -542,9 +544,26 @@ void AMyPlayerCharacter::Dash()
     // Activar Niagara del dash una sola vez
     if (DashNiagara)
     {
+        DashNiagara->SetVisibility(true, true);
         DashNiagara->SetWorldRotation(DashDir.Rotation());
+
         DashNiagara->DeactivateImmediate();
         DashNiagara->Activate(true);
+
+        FTimerHandle HideDashVFXTimerHandle;
+        GetWorldTimerManager().SetTimer(
+            HideDashVFXTimerHandle,
+            [this]()
+            {
+                if (DashNiagara)
+                {
+                    DashNiagara->DeactivateImmediate();
+                    DashNiagara->SetVisibility(false, true);
+                }
+            },
+            0.5f,
+            false
+        );
     }
 
     LaunchCharacter(DashDir * DashStrength, true, false);

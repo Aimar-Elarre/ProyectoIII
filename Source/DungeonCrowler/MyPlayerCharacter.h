@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
@@ -10,6 +12,8 @@
 #include "Components/AudioComponent.h"
 #include "MyPlayerHUD.h"
 #include "InventoryComponent.h"
+#include "NiagaraComponent.h"
+
 #include "MyPlayerCharacter.generated.h"
 
 class APickupItemActor;
@@ -61,6 +65,14 @@ public:
     void SetLastCheckpoint(FVector NewLocation);
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
+    UNiagaraSystem* DashVFX;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash|VFX")
+    UNiagaraComponent* DashNiagara;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
+    FVector DashVFXOffset = FVector(0.f, 0.f, -40.f);
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
     FVector MeshStandingScale = FVector(1.0f, 1.0f, 1.0f);

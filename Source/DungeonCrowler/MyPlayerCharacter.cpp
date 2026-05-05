@@ -1,5 +1,6 @@
 #include "MyPlayerCharacter.h"
-
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -49,7 +50,9 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     FootstepAudioComponent->SetupAttachment(RootComponent);
     FootstepAudioComponent->bAutoActivate = false;
     FootstepAudioComponent->bIsUISound = false;
-
+    DashNiagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("DashNiagara"));
+    DashNiagara->SetupAttachment(RootComponent);
+    DashNiagara->bAutoActivate = false;
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
@@ -513,6 +516,14 @@ void AMyPlayerCharacter::Dash()
     FVector DashDir = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::X);
     DashDir.Z = 0.f;
     DashDir.Normalize();
+
+    // Activar Niagara del dash una sola vez
+    if (DashNiagara)
+    {
+        DashNiagara->SetWorldRotation(DashDir.Rotation());
+        DashNiagara->DeactivateImmediate();
+        DashNiagara->Activate(true);
+    }
 
     LaunchCharacter(DashDir * DashStrength, true, false);
 

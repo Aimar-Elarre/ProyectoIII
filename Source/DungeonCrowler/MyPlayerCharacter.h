@@ -80,7 +80,7 @@ public:
     void ClearNearbyPickup(APickupItemActor* PickupToClear);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    void DropSpecificItem(const UItemData* ItemData);
+    void DropSpecificItem(const UItemData* ItemData, FVector Scale = FVector(1.f, 1.f, 1.f));
     // Sprint
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
     bool bSprintUnlocked = false;

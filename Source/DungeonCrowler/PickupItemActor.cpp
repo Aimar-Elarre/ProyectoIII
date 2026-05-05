@@ -62,14 +62,11 @@ void APickupItemActor::Tick(float DeltaTime)
 	SetActorLocation(NewLocation);
 }
 
-void APickupItemActor::SpawnAsDropped(FVector LaunchVelocity)
+void APickupItemActor::SpawnAsDropped(FVector LaunchVelocity, FVector Scale)
 {
 	bIsInPhysicsMode = true;
 
-	if (ItemData)
-	{
-		SetActorScale3D(ItemData->DroppedScale);
-	}
+	SetActorScale3D(Scale);
 
 	Trigger->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	Trigger->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
@@ -141,7 +138,7 @@ void APickupItemActor::TryPickup(AMyPlayerCharacter* Player)
 	if (!Player->InventoryComponent) return;
 	if (bIsInPhysicsMode) return;
 
-	const bool bAdded = Player->InventoryComponent->AddItem(ItemData, 1);
+	const bool bAdded = Player->InventoryComponent->AddItem(ItemData, 1, GetActorScale3D());
 	if (!bAdded)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No se pudo añadir al inventario"));

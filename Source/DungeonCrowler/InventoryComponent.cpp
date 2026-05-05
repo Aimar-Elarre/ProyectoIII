@@ -20,7 +20,7 @@ float UInventoryComponent::GetCurrentWeight() const
     return Total;
 }
 
-bool UInventoryComponent::AddItem(const UItemData* ItemData, int32 Quantity)
+bool UInventoryComponent::AddItem(const UItemData* ItemData, int32 Quantity, FVector Scale)
 {
     if (!ItemData || Quantity <= 0) return false;
 
@@ -31,6 +31,7 @@ bool UInventoryComponent::AddItem(const UItemData* ItemData, int32 Quantity)
     FInventoryEntry& Entry = Items.FindOrAdd(ItemData);
     Entry.ItemData = ItemData;
     Entry.Quantity += Quantity;
+    Entry.DropScale = Scale;
 
     OnInventoryChanged.Broadcast();
     return true;

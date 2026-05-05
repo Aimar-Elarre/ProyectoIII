@@ -253,7 +253,7 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     }
 }
 
-void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
+void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData, FVector Scale)
 {
     if (!InventoryComponent || !ItemData || !ItemData->PickupActorClass)
     {
@@ -282,7 +282,7 @@ void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
     SpawnedPickup->SetItemData(ItemData);
 
     const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
-    SpawnedPickup->SpawnAsDropped(DropImpulse);
+    SpawnedPickup->SpawnAsDropped(DropImpulse, Scale);
 
     InventoryComponent->RemoveItem(ItemData, 1);
     RefreshLegacyCarryFromInventory();
@@ -803,7 +803,7 @@ void AMyPlayerCharacter::DropItem()
     SpawnedPickup->SetItemData(Entry.ItemData);
 
     const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
-    SpawnedPickup->SpawnAsDropped(DropImpulse);
+    SpawnedPickup->SpawnAsDropped(DropImpulse, Entry.DropScale);
 
     InventoryComponent->RemoveItem(Entry.ItemData, 1);
     RefreshLegacyCarryFromInventory();

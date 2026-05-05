@@ -34,6 +34,18 @@ const UItemData* APickupItemActor::GetItemData() const
 	return ItemData;
 }
 
+void APickupItemActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(PhysicsSettleTimer);
+
+	if (Trigger && Trigger->IsSimulatingPhysics())
+	{
+		Trigger->SetSimulatePhysics(false);
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void APickupItemActor::BeginPlay()
 {
 	Super::BeginPlay();

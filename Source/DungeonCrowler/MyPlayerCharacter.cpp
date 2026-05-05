@@ -107,6 +107,23 @@ void AMyPlayerCharacter::BeginPlay()
     UpdateMovementSpeed();
 }
 
+void AMyPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
+    GetWorldTimerManager().ClearTimer(SlideTimerHandle);
+    GetWorldTimerManager().ClearTimer(DashCooldownHandle);
+    GetWorldTimerManager().ClearTimer(HintTimerHandle);
+    GetWorldTimerManager().ClearTimer(InventoryTutorialSecondHintHandle);
+
+    if (GetMesh() && GetMesh()->IsSimulatingPhysics())
+    {
+        GetMesh()->SetSimulatePhysics(false);
+        GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+    }
+
+    Super::EndPlay(EndPlayReason);
+}
+
 void AMyPlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);

@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
@@ -10,6 +12,8 @@
 #include "Components/AudioComponent.h"
 #include "MyPlayerHUD.h"
 #include "InventoryComponent.h"
+#include "NiagaraComponent.h"
+
 #include "MyPlayerCharacter.generated.h"
 
 class APickupItemActor;
@@ -26,6 +30,7 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     UPROPERTY()
     TObjectPtr<APickupItemActor> NearbyPickup = nullptr;
 
@@ -62,6 +67,17 @@ public:
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
+    UNiagaraSystem* DashVFX;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash|VFX")
+    UNiagaraComponent* DashNiagara;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
+    FVector DashVFXOffset = FVector(0.f, 0.f, -40.f);
+
+    UFUNCTION(BlueprintCallable, Category = "Ragdoll")
+    void ApplyRagdollImpulse(FVector ImpactPoint, FVector ImpulseDirection, float Strength = 60000.f);
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
     FVector MeshStandingScale = FVector(1.0f, 1.0f, 1.0f);
 
@@ -77,7 +93,7 @@ public:
     void ClearNearbyPickup(APickupItemActor* PickupToClear);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    void DropSpecificItem(const UItemData* ItemData);
+    void DropSpecificItem(const UItemData* ItemData, FVector Scale = FVector(1.f, 1.f, 1.f));
     // Sprint
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
     bool bSprintUnlocked = false;
@@ -328,6 +344,8 @@ public:
 
     float LastFootstepTime = 0.f;
     float FootstepBlockedUntil = 0.f;
+
+    FTransform InitialMeshRelativeTransform;
 
 private:
     UPROPERTY(EditDefaultsOnly, Category = "UI")

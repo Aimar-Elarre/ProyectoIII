@@ -62,6 +62,9 @@ public:
     void RespawnAtCheckpoint();
     void TakeDamageCustom(float DamageAmount);
 
+    UFUNCTION(BlueprintCallable, Category = "Ragdoll")
+    void ApplyRagdollImpulse(FVector ImpactPoint, FVector ImpulseDirection, float Strength = 60000.f);
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
     FVector MeshStandingScale = FVector(1.0f, 1.0f, 1.0f);
 

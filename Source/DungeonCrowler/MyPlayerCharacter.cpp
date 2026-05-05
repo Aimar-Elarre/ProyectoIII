@@ -638,6 +638,13 @@ void AMyPlayerCharacter::MakeMovementNoise(float Loudness)
     );
 }
 
+void AMyPlayerCharacter::ApplyRagdollImpulse(FVector ImpactPoint, FVector ImpulseDirection, float Strength)
+{
+    if (!bIsDead || !GetMesh()) return;
+
+    GetMesh()->AddImpulseAtLocation(ImpulseDirection.GetSafeNormal() * Strength, ImpactPoint);
+}
+
 void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 {
     if (bIsDead) return;
@@ -665,6 +672,7 @@ void AMyPlayerCharacter::Die()
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
     GetMesh()->SetSimulatePhysics(true);
+    
 
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {

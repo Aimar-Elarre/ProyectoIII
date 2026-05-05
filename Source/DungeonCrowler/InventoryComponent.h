@@ -16,6 +16,9 @@ struct FInventoryEntry
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     int32 Quantity = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    FVector DropScale = FVector(1.f, 1.f, 1.f);
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
@@ -38,7 +41,7 @@ public:
     float GetCurrentWeight() const;
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool AddItem(const UItemData* ItemData, int32 Quantity);
+    bool AddItem(const UItemData* ItemData, int32 Quantity, FVector Scale = FVector(1.f, 1.f, 1.f));
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RemoveItem(const UItemData* ItemData, int32 Quantity);

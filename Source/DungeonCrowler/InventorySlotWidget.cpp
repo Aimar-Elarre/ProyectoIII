@@ -81,5 +81,5 @@ void UInventorySlotWidget::OnDropClicked()
         return;
     }
 
-    Player->DropSpecificItem(CachedEntry.ItemData);
+    Player->DropSpecificItem(CachedEntry.ItemData, CachedEntry.DropScale);
 }

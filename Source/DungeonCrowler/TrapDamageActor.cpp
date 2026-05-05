@@ -37,6 +37,10 @@ void ATrapDamageActor::OnOverlapBegin(
 	{
 		Player->KillPlayer();
 
+		const FVector ImpactPoint = SweepResult.bBlockingHit ? FVector(SweepResult.ImpactPoint) : GetActorLocation();
+		const FVector ImpulseDir = (Player->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+		Player->ApplyRagdollImpulse(ImpactPoint, ImpulseDir);
+
 		if (TrapSound)
 		{
 			UGameplayStatics::PlaySoundAtLocation(this, TrapSound, GetActorLocation());

@@ -29,10 +29,11 @@ public:
 
     // Lanza el objeto con física al soltarlo (estilo Fortnite)
     UFUNCTION(BlueprintCallable, Category = "Pickup")
-    void SpawnAsDropped(FVector LaunchVelocity);
+    void SpawnAsDropped(FVector LaunchVelocity, FVector Scale = FVector(1.f, 1.f, 1.f));
 
 protected:
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void Tick(float DeltaTime) override;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickup")

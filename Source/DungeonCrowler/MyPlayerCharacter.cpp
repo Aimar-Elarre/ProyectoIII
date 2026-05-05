@@ -70,6 +70,8 @@ void AMyPlayerCharacter::BeginPlay()
 
         CurrentMeshScale = GetMesh()->GetRelativeScale3D();
         MeshStandingScale = CurrentMeshScale;
+
+        InitialMeshRelativeTransform = GetMesh()->GetRelativeTransform();
     }
 
     if (Camera)
@@ -103,6 +105,23 @@ void AMyPlayerCharacter::BeginPlay()
 
     RefreshLegacyCarryFromInventory();
     UpdateMovementSpeed();
+}
+
+void AMyPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
+    GetWorldTimerManager().ClearTimer(SlideTimerHandle);
+    GetWorldTimerManager().ClearTimer(DashCooldownHandle);
+    GetWorldTimerManager().ClearTimer(HintTimerHandle);
+    GetWorldTimerManager().ClearTimer(InventoryTutorialSecondHintHandle);
+
+    if (GetMesh() && GetMesh()->IsSimulatingPhysics())
+    {
+        GetMesh()->SetSimulatePhysics(false);
+        GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+    }
+
+    Super::EndPlay(EndPlayReason);
 }
 
 void AMyPlayerCharacter::Tick(float DeltaTime)
@@ -182,43 +201,46 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         PlayerHUD->UpdateCarry(ItemsCarried, FMath::Max(ItemsCarried, 1));
     }
 
-    const float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
-
-    CurrentCapsuleHeight = FMath::FInterpTo(
-        CurrentCapsuleHeight,
-        TargetHeight,
-        DeltaTime,
-        CrouchSpeed
-    );
-
-    if (GetMesh())
+    if (!bIsDead)
     {
-        const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
+        const float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
 
-        CurrentMeshZ = FMath::FInterpTo(
-            CurrentMeshZ,
-            TargetMeshZ,
+        CurrentCapsuleHeight = FMath::FInterpTo(
+            CurrentCapsuleHeight,
+            TargetHeight,
             DeltaTime,
             CrouchSpeed
         );
 
-        FVector MeshLocation = GetMesh()->GetRelativeLocation();
-        MeshLocation.Z = CurrentMeshZ;
-        GetMesh()->SetRelativeLocation(MeshLocation);
+        if (GetMesh())
+        {
+            const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
 
-        const FVector TargetScale = bIsCrouching ? MeshCrouchingScale : MeshStandingScale;
+            CurrentMeshZ = FMath::FInterpTo(
+                CurrentMeshZ,
+                TargetMeshZ,
+                DeltaTime,
+                CrouchSpeed
+            );
 
-        CurrentMeshScale = FMath::VInterpTo(
-            CurrentMeshScale,
-            TargetScale,
-            DeltaTime,
-            CrouchSpeed
-        );
+            FVector MeshLocation = GetMesh()->GetRelativeLocation();
+            MeshLocation.Z = CurrentMeshZ;
+            GetMesh()->SetRelativeLocation(MeshLocation);
 
-        GetMesh()->SetRelativeScale3D(CurrentMeshScale);
+            const FVector TargetScale = bIsCrouching ? MeshCrouchingScale : MeshStandingScale;
+
+            CurrentMeshScale = FMath::VInterpTo(
+                CurrentMeshScale,
+                TargetScale,
+                DeltaTime,
+                CrouchSpeed
+            );
+
+            GetMesh()->SetRelativeScale3D(CurrentMeshScale);
+        }
+
+        GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
     }
-
-    GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
 
     if (Camera)
     {
@@ -248,7 +270,7 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     }
 }
 
-void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
+void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData, FVector Scale)
 {
     if (!InventoryComponent || !ItemData || !ItemData->PickupActorClass)
     {
@@ -277,7 +299,7 @@ void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
     SpawnedPickup->SetItemData(ItemData);
 
     const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
-    SpawnedPickup->SpawnAsDropped(DropImpulse);
+    SpawnedPickup->SpawnAsDropped(DropImpulse, Scale);
 
     InventoryComponent->RemoveItem(ItemData, 1);
     RefreshLegacyCarryFromInventory();
@@ -636,6 +658,13 @@ void AMyPlayerCharacter::MakeMovementNoise(float Loudness)
     );
 }
 
+void AMyPlayerCharacter::ApplyRagdollImpulse(FVector ImpactPoint, FVector ImpulseDirection, float Strength)
+{
+    if (!bIsDead || !GetMesh()) return;
+
+    GetMesh()->AddImpulseAtLocation(ImpulseDirection.GetSafeNormal() * Strength, ImpactPoint);
+}
+
 void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 {
     if (bIsDead) return;
@@ -659,6 +688,11 @@ void AMyPlayerCharacter::Die()
 
     StopFootstepAudio();
     GetCharacterMovement()->DisableMovement();
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+    GetMesh()->SetSimulatePhysics(true);
+    
 
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
@@ -718,6 +752,12 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
         return;
     }
 
+    GetMesh()->SetSimulatePhysics(false);
+    GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+    GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+    GetMesh()->SetRelativeTransform(InitialMeshRelativeTransform);
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
     SetActorLocation(LastCheckpointLocation);
 
     CurrentHealth = MaxHealth;
@@ -726,6 +766,9 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     bIsRunning = false;
     bIsSliding = false;
     bIsCrouching = false;
+
+    CurrentMeshZ = InitialMeshRelativeTransform.GetLocation().Z;
+    CurrentMeshScale = InitialMeshRelativeTransform.GetScale3D();
 
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->GroundFriction = OriginalGroundFriction;
@@ -777,7 +820,7 @@ void AMyPlayerCharacter::DropItem()
     SpawnedPickup->SetItemData(Entry.ItemData);
 
     const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
-    SpawnedPickup->SpawnAsDropped(DropImpulse);
+    SpawnedPickup->SpawnAsDropped(DropImpulse, Entry.DropScale);
 
     InventoryComponent->RemoveItem(Entry.ItemData, 1);
     RefreshLegacyCarryFromInventory();

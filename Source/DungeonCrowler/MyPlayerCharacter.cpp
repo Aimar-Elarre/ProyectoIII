@@ -184,43 +184,46 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         PlayerHUD->UpdateCarry(ItemsCarried, FMath::Max(ItemsCarried, 1));
     }
 
-    const float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
-
-    CurrentCapsuleHeight = FMath::FInterpTo(
-        CurrentCapsuleHeight,
-        TargetHeight,
-        DeltaTime,
-        CrouchSpeed
-    );
-
-    if (GetMesh())
+    if (!bIsDead)
     {
-        const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
+        const float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
 
-        CurrentMeshZ = FMath::FInterpTo(
-            CurrentMeshZ,
-            TargetMeshZ,
+        CurrentCapsuleHeight = FMath::FInterpTo(
+            CurrentCapsuleHeight,
+            TargetHeight,
             DeltaTime,
             CrouchSpeed
         );
 
-        FVector MeshLocation = GetMesh()->GetRelativeLocation();
-        MeshLocation.Z = CurrentMeshZ;
-        GetMesh()->SetRelativeLocation(MeshLocation);
+        if (GetMesh())
+        {
+            const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
 
-        const FVector TargetScale = bIsCrouching ? MeshCrouchingScale : MeshStandingScale;
+            CurrentMeshZ = FMath::FInterpTo(
+                CurrentMeshZ,
+                TargetMeshZ,
+                DeltaTime,
+                CrouchSpeed
+            );
 
-        CurrentMeshScale = FMath::VInterpTo(
-            CurrentMeshScale,
-            TargetScale,
-            DeltaTime,
-            CrouchSpeed
-        );
+            FVector MeshLocation = GetMesh()->GetRelativeLocation();
+            MeshLocation.Z = CurrentMeshZ;
+            GetMesh()->SetRelativeLocation(MeshLocation);
 
-        GetMesh()->SetRelativeScale3D(CurrentMeshScale);
+            const FVector TargetScale = bIsCrouching ? MeshCrouchingScale : MeshStandingScale;
+
+            CurrentMeshScale = FMath::VInterpTo(
+                CurrentMeshScale,
+                TargetScale,
+                DeltaTime,
+                CrouchSpeed
+            );
+
+            GetMesh()->SetRelativeScale3D(CurrentMeshScale);
+        }
+
+        GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
     }
-
-    GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
 
     if (Camera)
     {

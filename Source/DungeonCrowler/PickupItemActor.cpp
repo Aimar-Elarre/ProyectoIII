@@ -72,6 +72,7 @@ void APickupItemActor::Tick(float DeltaTime)
 	NewLocation.Z += OffsetZ;
 
 	SetActorLocation(NewLocation);
+	AddActorLocalRotation(FRotator(0.f, RotationSpeed * DeltaTime, 0.f));
 }
 
 void APickupItemActor::SpawnAsDropped(FVector LaunchVelocity, FVector Scale)

@@ -27,7 +27,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Pickup")
     void TryPickup(AMyPlayerCharacter* Player);
 
-    // Lanza el objeto con física al soltarlo (estilo Fortnite)
+    // Lanza el objeto con física al soltarlo 
     UFUNCTION(BlueprintCallable, Category = "Pickup")
     void SpawnAsDropped(FVector LaunchVelocity, FVector Scale = FVector(1.f, 1.f, 1.f));
 
@@ -54,6 +54,9 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "Animation")
     float OscillationSpeed = 2.f;
+
+    UPROPERTY(EditAnywhere, Category = "Animation")
+    float RotationSpeed = 90.f;
 
 private:
     FVector BaseLocation;

@@ -12,6 +12,7 @@
 #include "InventoryWidget.h"
 #include "ItemData.h"
 #include "Perception/AISense_Hearing.h"
+#include "DSaveGame.h"
 
 AMyPlayerCharacter::AMyPlayerCharacter()
 {
@@ -110,6 +111,7 @@ void AMyPlayerCharacter::BeginPlay()
 
     RefreshLegacyCarryFromInventory();
     UpdateMovementSpeed();
+    LoadFromSaveGame();
 }
 
 void AMyPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -756,9 +758,10 @@ void AMyPlayerCharacter::KillPlayer()
     Die();
 }
 
-void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation)
+void AMyPlayerCharacter::SetLastCheckpoint(FVector NewLocation, FRotator NewRotation)
 {
     LastCheckpointLocation = NewLocation;
+    LastCheckpointRotation = NewRotation;
     bHasCheckpoint = true;
 
     UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO EN: %s"), *LastCheckpointLocation.ToString());
@@ -789,7 +792,12 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
     SetActorLocation(LastCheckpointLocation);
+    SetActorRotation(LastCheckpointRotation);
 
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        PC->SetControlRotation(LastCheckpointRotation);
+    }
     CurrentHealth = MaxHealth;
     CurrentStamina = MaxStamina;
     bIsDead = false;
@@ -804,9 +812,91 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     GetCharacterMovement()->GroundFriction = OriginalGroundFriction;
     UpdateMovementSpeed();
 
+    // Restore inventory from save on respawn
+    if (InventoryComponent)
+    {
+        UDSaveGame* LoadedGame = Cast<UDSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("AutoCheckpointSlot"), 0));
+        
+        if (LoadedGame && LoadedGame->InventoryItems.Num() > 0)
+        {
+            // Clear existing inventory
+            TArray<FInventoryEntry> ExistingItems = InventoryComponent->GetItemsAsArray();
+            for (const FInventoryEntry& Entry : ExistingItems)
+            {
+                if (Entry.ItemData)
+                {
+                    InventoryComponent->RemoveItem(Entry.ItemData, Entry.Quantity);
+                }
+            }
+
+            // Restore saved inventory
+            for (const FInventorySlotSave& SavedSlot : LoadedGame->InventoryItems)
+            {
+                if (UItemData* ItemData = Cast<UItemData>(SavedSlot.ItemDataPath.TryLoad()))
+                {
+                    InventoryComponent->AddItem(ItemData, SavedSlot.Quantity, SavedSlot.DropScale);
+                }
+            }
+
+            RefreshLegacyCarryFromInventory();
+            UE_LOG(LogTemp, Warning, TEXT("INVENTARIO RESTAURADO EN RESPAWN"));
+        }
+    }
+
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
         EnableInput(PC);
+    }
+}
+
+void AMyPlayerCharacter::LoadFromSaveGame()
+{
+    // Try to load the save game
+    UDSaveGame* LoadedGame = Cast<UDSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("AutoCheckpointSlot"), 0));
+    
+    if (!LoadedGame)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("NO SE ENCONTRO ARCHIVO DE GUARDADO"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("ARCHIVO DE GUARDADO CARGADO"));
+
+    // Restore checkpoint data
+    if (LoadedGame->bHasCheckpoint)
+    {
+        LastCheckpointLocation = LoadedGame->CheckpointLocation;
+        LastCheckpointRotation = LoadedGame->CheckpointRotation;
+        bHasCheckpoint = true;
+        UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT RESTAURADO EN: %s"), *LastCheckpointLocation.ToString());
+    }
+
+    // Restore inventory
+    if (InventoryComponent && LoadedGame->InventoryItems.Num() > 0)
+    {
+        // Clear existing inventory
+        TArray<FInventoryEntry> ExistingItems = InventoryComponent->GetItemsAsArray();
+        for (const FInventoryEntry& Entry : ExistingItems)
+        {
+            if (Entry.ItemData)
+            {
+                InventoryComponent->RemoveItem(Entry.ItemData, Entry.Quantity);
+            }
+        }
+
+        // Load saved inventory items
+        for (const FInventorySlotSave& SavedSlot : LoadedGame->InventoryItems)
+        {
+            // Load the item data from the soft reference
+            if (UItemData* ItemData = Cast<UItemData>(SavedSlot.ItemDataPath.TryLoad()))
+            {
+                InventoryComponent->AddItem(ItemData, SavedSlot.Quantity, SavedSlot.DropScale);
+                UE_LOG(LogTemp, Warning, TEXT("ITEM RESTAURADO: %s (cantidad: %d)"), *SavedSlot.ItemDataPath.GetAssetName(), SavedSlot.Quantity);
+            }
+        }
+
+        RefreshLegacyCarryFromInventory();
+        UE_LOG(LogTemp, Warning, TEXT("INVENTARIO RESTAURADO CON %d ITEMS"), LoadedGame->InventoryItems.Num());
     }
 }
 

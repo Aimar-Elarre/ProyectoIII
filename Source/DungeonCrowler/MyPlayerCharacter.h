@@ -63,8 +63,9 @@ public:
     // Vida / Respawn
     void Die();
     void KillPlayer();
-    void SetLastCheckpoint(FVector NewLocation);
+    void SetLastCheckpoint(FVector NewLocation, FRotator NewRotation);
     void RespawnAtCheckpoint();
+    void LoadFromSaveGame();
     void TakeDamageCustom(float DamageAmount);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
@@ -193,16 +194,17 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
     FVector LastCheckpointLocation = FVector::ZeroVector;
 
-    // Dash
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashStrength = 2000.f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+    bool bCanDash = true;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashCooldown = 1.f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+    float DashStrength = 2000.0f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash")
-    bool bCanDash = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+    float DashCooldown = 1.0f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
+	FRotator LastCheckpointRotation = FRotator::ZeroRotator;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
     float DashFOVBoost = 8.f;
 

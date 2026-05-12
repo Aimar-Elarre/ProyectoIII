@@ -58,6 +58,7 @@ void AFireTrapActor::BeginPlay()
 void AFireTrapActor::StartFiring()
 {
     if (!FireProjectileClass) return;
+    if (GetWorldTimerManager().IsTimerActive(FireTimerHandle)) return;
 
     GetWorldTimerManager().SetTimer(
         FireTimerHandle,
@@ -112,20 +113,24 @@ void AFireTrapActor::OnActivationBeginOverlap(UPrimitiveComponent* OverlappedCom
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    UE_LOG(LogTemp, Warning, TEXT("FireTrap: Overlap detectado con %s"), OtherActor ? *OtherActor->GetName() : TEXT("null"));
-    if (!OtherActor || !Cast<ACharacter>(OtherActor)) return;
+    AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
+    if (!Player || Player->bIsDead) return;
 
-    bPlayerInRange = true;
+    OverlapCount++;
     StartFiring();
 }
 
 void AFireTrapActor::OnActivationEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    if (!OtherActor || !Cast<ACharacter>(OtherActor)) return;
+    AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor);
+    if (!Player) return;
 
-    bPlayerInRange = false;
-    StopFiring();
+    OverlapCount = FMath::Max(0, OverlapCount - 1);
+    if (OverlapCount == 0)
+    {
+        StopFiring();
+    }
 }
 
 void AFireTrapActor::Tick(float DeltaTime)

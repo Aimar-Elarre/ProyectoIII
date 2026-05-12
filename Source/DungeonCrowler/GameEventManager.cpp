@@ -48,6 +48,17 @@ UGameEventManager& UGameEventManager::Get(UObject* WorldContext)
     return *Instance;
 }
 
+void UGameEventManager::CleanupForWorld(UWorld* World)
+{
+    UGameEventManager** Found = Instances.Find(World);
+    if (Found && *Found)
+    {
+        (*Found)->Reset();
+        (*Found)->RemoveFromRoot();
+        Instances.Remove(World);
+    }
+}
+
 void UGameEventManager::Reset()
 {
     bGameStarted = false;

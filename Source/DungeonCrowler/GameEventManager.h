@@ -44,6 +44,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Game Events")
     void Reset();
 
+    // Limpiar la instancia del mundo al terminar PIE
+    static void CleanupForWorld(UWorld* World);
+
     // ==================== PROPIEDADES ====================
     
     // Configuración de activación

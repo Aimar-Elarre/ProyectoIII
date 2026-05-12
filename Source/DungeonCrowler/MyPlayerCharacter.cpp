@@ -71,10 +71,12 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
     // Niagara del dash
     DashNiagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("DashNiagara"));
-    DashNiagara->SetupAttachment(RootComponent);
+    DashNiagara->SetupAttachment(GetMesh());
+    DashNiagara->SetRelativeLocation(DashVFXOffset);
+    DashNiagara->SetRelativeRotation(FRotator::ZeroRotator);
     DashNiagara->bAutoActivate = false;
     DashNiagara->SetAutoActivate(false);
-    DashNiagara->SetVisibility(false, true);
+    DashNiagara->Deactivate();
 
     // Inventario
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
@@ -565,42 +567,47 @@ void AMyPlayerCharacter::Dash()
 
     bCanDash = false;
 
-    // 1. Dirección del Dash
     const FRotator ControlRot = Controller ? Controller->GetControlRotation() : GetActorRotation();
     FVector DashDir = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::X);
     DashDir.Z = 0.f;
     DashDir.Normalize();
 
-    // 2. EFECTO DE CÁMARA (FOV)
-    // Aplicamos el boost de golpe. En el Tick, DashFOVRecoverSpeed hará que baje solo.
     CurrentDashFOVOffset = DashFOVBoost;
 
-    // OPCIONAL: Si quieres que el estirón sea instantáneo antes de que el Tick interpole:
     if (Camera)
     {
         Camera->SetFieldOfView(Camera->FieldOfView + DashFOVBoost);
     }
 
-    // 3. VFX de Niagara
+    // VFX del dash pegado al personaje
     if (DashNiagara)
     {
-        DashNiagara->SetVisibility(true, true);
-        DashNiagara->SetWorldRotation(DashDir.Rotation());
-        DashNiagara->DeactivateImmediate();
+        GetWorldTimerManager().ClearTimer(DashVFXTimerHandle);
+
+        DashNiagara->AttachToComponent(
+            GetMesh(),
+            FAttachmentTransformRules::KeepRelativeTransform
+        );
+
+        DashNiagara->SetRelativeLocation(DashVFXOffset);
+        DashNiagara->SetRelativeRotation(FRotator::ZeroRotator);
+
         DashNiagara->Activate(true);
 
-        FTimerHandle HideDashVFXTimerHandle;
-        GetWorldTimerManager().SetTimer(HideDashVFXTimerHandle, [this]()
+        GetWorldTimerManager().SetTimer(
+            DashVFXTimerHandle,
+            [this]()
             {
                 if (DashNiagara)
                 {
-                    DashNiagara->DeactivateImmediate();
-                    DashNiagara->SetVisibility(false, true);
+                    DashNiagara->Deactivate();
                 }
-            }, 0.5f, false);
+            },
+            DashVFXDuration,
+            false
+        );
     }
 
-    // 4. Física y Sonido
     LaunchCharacter(DashDir * DashStrength, true, false);
 
     if (DashSound)
@@ -610,8 +617,13 @@ void AMyPlayerCharacter::Dash()
 
     MakeMovementNoise(1.2f);
 
-    // 5. Cooldown
-    GetWorldTimerManager().SetTimer(DashCooldownHandle, this, &AMyPlayerCharacter::ResetDash, DashCooldown, false);
+    GetWorldTimerManager().SetTimer(
+        DashCooldownHandle,
+        this,
+        &AMyPlayerCharacter::ResetDash,
+        DashCooldown,
+        false
+    );
 }
 
 void AMyPlayerCharacter::ResetDash()

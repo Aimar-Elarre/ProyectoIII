@@ -200,6 +200,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
 	float DashCooldown = 1.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash|VFX")
+	float DashVFXDuration = 0.35f;
+
+	FTimerHandle DashVFXTimerHandle;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash")
 	bool bCanDash = false;
 

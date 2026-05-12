@@ -126,6 +126,18 @@ void AMyPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
         GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
     }
 
+    if (PlayerHUD)
+    {
+        PlayerHUD->RemoveFromParent();
+        PlayerHUD = nullptr;
+    }
+
+    if (InventoryWidgetInstance)
+    {
+        InventoryWidgetInstance->RemoveFromParent();
+        InventoryWidgetInstance = nullptr;
+    }
+
     Super::EndPlay(EndPlayReason);
 }
 
@@ -1018,16 +1030,19 @@ void AMyPlayerCharacter::ShowInventory()
     if (!InventoryWidgetInstance && InventoryWidgetClass)
     {
         InventoryWidgetInstance = CreateWidget<UUserWidget>(PC, InventoryWidgetClass);
+    }
 
+    if (InventoryWidgetInstance)
+    {
         if (UInventoryWidget* InvWidget = Cast<UInventoryWidget>(InventoryWidgetInstance))
         {
             InvWidget->InitInventory(InventoryComponent);
         }
-    }
 
-    if (InventoryWidgetInstance && !InventoryWidgetInstance->IsInViewport())
-    {
-        InventoryWidgetInstance->AddToViewport(10);
+        if (!InventoryWidgetInstance->IsInViewport())
+        {
+            InventoryWidgetInstance->AddToViewport(10);
+        }
     }
 
     bInventoryOpen = true;

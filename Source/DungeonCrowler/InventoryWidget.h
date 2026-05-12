@@ -25,6 +25,7 @@ public:
 
 protected:
     virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
 
 
     UPROPERTY(meta = (BindWidget))
@@ -39,7 +40,7 @@ protected:
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UTextBlock> MaxWeightText;
 
-    // Clase del slot — asígnala en el WBP
+    // Clase del slot ï¿½ asï¿½gnala en el WBP
     UPROPERTY(EditDefaultsOnly, Category = "Inventory")
     TSubclassOf<UInventorySlotWidget> SlotWidgetClass;
 

@@ -41,6 +41,8 @@ void ACheckpoint::OnOverlapBegin(
 
     if (AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(OtherActor))
     {
+        if (Player->bIsDead) return;
+
         Player->SetLastCheckpoint(GetActorLocation());
         UE_LOG(LogTemp, Warning, TEXT("CHECKPOINT GUARDADO"));
     }

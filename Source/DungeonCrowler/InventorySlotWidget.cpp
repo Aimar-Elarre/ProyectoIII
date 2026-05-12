@@ -14,7 +14,7 @@ void UInventorySlotWidget::NativeConstruct()
 
     if (DropButton)
     {
-        DropButton->OnClicked.AddDynamic(this, &UInventorySlotWidget::OnDropClicked);
+        DropButton->OnClicked.AddUniqueDynamic(this, &UInventorySlotWidget::OnDropClicked);
     }
 }
 

@@ -17,24 +17,40 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
+    // Configuración básica de colisión y movimiento
     GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
     GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 
-    SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-    SpringArm->SetupAttachment(RootComponent);
-    SpringArm->TargetArmLength = 0.f;
-    SpringArm->bUsePawnControlRotation = true;
-
-    Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-    Camera->SetupAttachment(SpringArm);
-    Camera->bUsePawnControlRotation = false;
-    Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
-
-    bUseControllerRotationYaw = true;
     bUseControllerRotationPitch = false;
     bUseControllerRotationRoll = false;
+    bUseControllerRotationYaw = false;
 
-    GetCharacterMovement()->bOrientRotationToMovement = false;
+    // Spring Arm atachado a la Mesh del personaje
+    SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+    SpringArm->SetupAttachment(RootComponent);
+
+    // Posición de la cámara respecto a la Mesh
+    SpringArm->TargetArmLength = 300.f;
+    SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 140.f));
+    SpringArm->SocketOffset = FVector(0.f, 0.f, 20.f);
+
+    // Colisión de cámara para que no atraviese paredes
+    SpringArm->bDoCollisionTest = true;
+    SpringArm->ProbeChannel = ECC_Camera;
+    SpringArm->ProbeSize = 24.0f;
+
+    // Sin retraso de cámara
+    SpringArm->bEnableCameraLag = false;
+    SpringArm->bEnableCameraRotationLag = false;
+
+    // Cámara
+    Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+    Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+    Camera->SetRelativeLocation(FVector::ZeroVector);
+    Camera->SetRelativeRotation(FRotator::ZeroRotator);
+
+
+    // Movimiento físico
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     GetCharacterMovement()->JumpZVelocity = 420.f;
     GetCharacterMovement()->GravityScale = 1.6f;
@@ -46,18 +62,22 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
     CurrentCapsuleHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
+    // Audio de pasos
     FootstepAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FootstepAudioComponent"));
     FootstepAudioComponent->SetupAttachment(RootComponent);
     FootstepAudioComponent->bAutoActivate = false;
     FootstepAudioComponent->bIsUISound = false;
+
+    // Niagara del dash
     DashNiagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("DashNiagara"));
     DashNiagara->SetupAttachment(RootComponent);
     DashNiagara->bAutoActivate = false;
     DashNiagara->SetAutoActivate(false);
     DashNiagara->SetVisibility(false, true);
+
+    // Inventario
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
-
 void AMyPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
@@ -249,22 +269,18 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
 
     if (Camera)
     {
-        const float TargetFOV = bIsRunning ? RunFOV : NormalFOV;
+        // 1. Determinar el FOV base según si corremos o no
+        float TargetBaseFOV = bIsRunning ? RunFOV : NormalFOV;
 
-        CurrentDashFOVOffset = FMath::FInterpTo(
-            CurrentDashFOVOffset,
-            0.f,
-            DeltaTime,
-            DashFOVRecoverSpeed
-        );
+        // 2. Recuperar el offset del Dash poco a poco hacia 0
+        // Usamos una velocidad alta para que el efecto de "vuelta a la normalidad" sea fluido
+        CurrentDashFOVOffset = FMath::FInterpTo(CurrentDashFOVOffset, 0.f, DeltaTime, DashFOVRecoverSpeed);
 
-        const float FinalTargetFOV = TargetFOV + CurrentDashFOVOffset;
-        const float NewFOV = FMath::FInterpTo(
-            Camera->FieldOfView,
-            FinalTargetFOV,
-            DeltaTime,
-            FOVInterpSpeed
-        );
+        // 3. El FOV final es la suma de ambos
+        float FinalTargetFOV = TargetBaseFOV + CurrentDashFOVOffset;
+
+        // 4. Aplicamos la interpolación suave para que no haya saltos bruscos
+        float NewFOV = FMath::FInterpTo(Camera->FieldOfView, FinalTargetFOV, DeltaTime, FOVInterpSpeed);
 
         Camera->SetFieldOfView(NewFOV);
     }
@@ -356,7 +372,7 @@ void AMyPlayerCharacter::MoveForward(float Value)
         const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
 
         const FVector ForwardDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
-        AddMovementInput(ForwardDir, Value);
+        GetMovementComponent()->AddInputVector(ForwardDir * Value, false );
 
         const float Loudness = bIsRunning ? 0.8f : 0.4f;
         MakeMovementNoise(Loudness);
@@ -371,7 +387,7 @@ void AMyPlayerCharacter::MoveRight(float Value)
         const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
 
         const FVector RightDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
-        AddMovementInput(RightDir, Value);
+        GetMovementComponent()->AddInputVector(RightDir * Value, false);
 
         const float Loudness = bIsRunning ? 0.8f : 0.4f;
         MakeMovementNoise(Loudness);
@@ -529,46 +545,48 @@ void AMyPlayerCharacter::StopSlide()
 
 void AMyPlayerCharacter::Dash()
 {
-    if (!bDashUnlocked) return;
-    if (!bCanDash) return;
-    if (!bHasJumped) return;
+    if (!bDashUnlocked || !bCanDash || !bHasJumped) return;
     if (GetCharacterMovement()->IsMovingOnGround()) return;
 
     bCanDash = false;
 
+    // 1. Dirección del Dash
     const FRotator ControlRot = Controller ? Controller->GetControlRotation() : GetActorRotation();
     FVector DashDir = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::X);
     DashDir.Z = 0.f;
     DashDir.Normalize();
 
-    // Activar Niagara del dash una sola vez
+    // 2. EFECTO DE CÁMARA (FOV)
+    // Aplicamos el boost de golpe. En el Tick, DashFOVRecoverSpeed hará que baje solo.
+    CurrentDashFOVOffset = DashFOVBoost;
+
+    // OPCIONAL: Si quieres que el estirón sea instantáneo antes de que el Tick interpole:
+    if (Camera)
+    {
+        Camera->SetFieldOfView(Camera->FieldOfView + DashFOVBoost);
+    }
+
+    // 3. VFX de Niagara
     if (DashNiagara)
     {
         DashNiagara->SetVisibility(true, true);
         DashNiagara->SetWorldRotation(DashDir.Rotation());
-
         DashNiagara->DeactivateImmediate();
         DashNiagara->Activate(true);
 
         FTimerHandle HideDashVFXTimerHandle;
-        GetWorldTimerManager().SetTimer(
-            HideDashVFXTimerHandle,
-            [this]()
+        GetWorldTimerManager().SetTimer(HideDashVFXTimerHandle, [this]()
             {
                 if (DashNiagara)
                 {
                     DashNiagara->DeactivateImmediate();
                     DashNiagara->SetVisibility(false, true);
                 }
-            },
-            0.5f,
-            false
-        );
+            }, 0.5f, false);
     }
 
+    // 4. Física y Sonido
     LaunchCharacter(DashDir * DashStrength, true, false);
-
-    CurrentDashFOVOffset = DashFOVBoost;
 
     if (DashSound)
     {
@@ -577,13 +595,8 @@ void AMyPlayerCharacter::Dash()
 
     MakeMovementNoise(1.2f);
 
-    GetWorldTimerManager().SetTimer(
-        DashCooldownHandle,
-        this,
-        &AMyPlayerCharacter::ResetDash,
-        DashCooldown,
-        false
-    );
+    // 5. Cooldown
+    GetWorldTimerManager().SetTimer(DashCooldownHandle, this, &AMyPlayerCharacter::ResetDash, DashCooldown, false);
 }
 
 void AMyPlayerCharacter::ResetDash()

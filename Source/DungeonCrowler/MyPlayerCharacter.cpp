@@ -1,4 +1,5 @@
 #include "MyPlayerCharacter.h"
+#include "GameEventManager.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -137,6 +138,8 @@ void AMyPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
         InventoryWidgetInstance->RemoveFromParent();
         InventoryWidgetInstance = nullptr;
     }
+
+    UGameEventManager::CleanupForWorld(GetWorld());
 
     Super::EndPlay(EndPlayReason);
 }

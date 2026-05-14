@@ -7,7 +7,7 @@
 
 class UUserWidget;
 class AMyPlayerCharacter;
-class UGameEventManager;
+class ADungeonGameState;
 
 UCLASS()
 class DUNGEONCROWLER_API AGameEventTrigger : public AActor
@@ -21,9 +21,9 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-    // Referencia al GameEventManager (se obtiene automáticamente)
+    // Referencia al GameState (se obtiene automáticamente)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Event")
-    TObjectPtr<UGameEventManager> EventManager;
+    TObjectPtr<ADungeonGameState> GameState;
 
     // Widget de Blueprint que se mostrará al activar
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Event")

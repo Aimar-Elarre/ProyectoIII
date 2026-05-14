@@ -1,4 +1,4 @@
-#include "GameEventManager.h"
+#include "DungeonGameState.h"
 #include "../Player/MyPlayerCharacter.h"
 #include "../Inventory/InventoryComponent.h"
 #include "../Inventory/ItemData.h"
@@ -6,10 +6,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 
-// Mapa estático de instancias por mundo
-TMap<UWorld*, UGameEventManager*> UGameEventManager::Instances;
-
-UGameEventManager::UGameEventManager()
+ADungeonGameState::ADungeonGameState()
 {
     bGameStarted = false;
     bInitialized = false;
@@ -17,38 +14,7 @@ UGameEventManager::UGameEventManager()
     bGameEnded = false;
 }
 
-UGameEventManager::~UGameEventManager()
-{
-}
-
-UGameEventManager& UGameEventManager::Get(UObject* WorldContext)
-{
-    UWorld* World = GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::ReturnNull);
-    if (!World)
-    {
-        World = GEngine->GetCurrentPlayWorld();
-    }
-    
-    if (!World)
-    {
-        UE_LOG(LogTemp, Error, TEXT("[GameEventManager] Get: No se pudo obtener el mundo"));
-        static UGameEventManager FallbackInstance;
-        return FallbackInstance;
-    }
-
-    // Buscar o crear instancia
-    UGameEventManager*& Instance = Instances.FindOrAdd(World);
-    if (!Instance)
-    {
-        Instance = NewObject<UGameEventManager>(World);
-        Instance->AddToRoot(); // Evitar que se recolecte por garbage
-        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] Get: Nueva instancia creada para mundo"));
-    }
-
-    return *Instance;
-}
-
-void UGameEventManager::Reset()
+void ADungeonGameState::Reset()
 {
     bGameStarted = false;
     bInitialized = false;
@@ -62,11 +28,11 @@ void UGameEventManager::Reset()
     }
 }
 
-void UGameEventManager::Initialize(AMyPlayerCharacter* PlayerChar)
+void ADungeonGameState::Initialize(AMyPlayerCharacter* PlayerChar)
 {
     if (!PlayerChar)
     {
-        UE_LOG(LogTemp, Error, TEXT("[GameEventManager] Initialize: PlayerCharacter es NULO"));
+        UE_LOG(LogTemp, Error, TEXT("[DungeonGameState] Initialize: PlayerCharacter es NULO"));
         return;
     }
 
@@ -74,7 +40,7 @@ void UGameEventManager::Initialize(AMyPlayerCharacter* PlayerChar)
     bInitialized = true;
     bGameStarted = true;
 
-    UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] Initialize: Juego iniciado"));
+    UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] Initialize: Juego iniciado"));
 
     // Mostrar widget de inicio si está configurado
     if (StartWidgetClass)
@@ -83,11 +49,11 @@ void UGameEventManager::Initialize(AMyPlayerCharacter* PlayerChar)
     }
 }
 
-void UGameEventManager::CheckEnemyActivation()
+void ADungeonGameState::CheckEnemyActivation()
 {
     if (!bInitialized || !PlayerCharacter)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] CheckEnemyActivation: No inicializado o sin jugador"));
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] CheckEnemyActivation: No inicializado o sin jugador"));
         return;
     }
 
@@ -104,7 +70,7 @@ void UGameEventManager::CheckEnemyActivation()
     CheckItemActivation();
 }
 
-void UGameEventManager::CheckMoneyActivation()
+void ADungeonGameState::CheckMoneyActivation()
 {
     if (bEnemyActivated || ActivationMoneyThreshold <= 0.f)
     {
@@ -112,19 +78,19 @@ void UGameEventManager::CheckMoneyActivation()
     }
 
     const float CurrentMoney = PlayerCharacter->GetCurrentMoney();
-    UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] CheckMoneyActivation: Dinero: %.2f / Umbral: %.2f"),
+    UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] CheckMoneyActivation: Dinero: %.2f / Umbral: %.2f"),
         CurrentMoney, ActivationMoneyThreshold);
 
     if (CurrentMoney >= ActivationMoneyThreshold)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] ¡ACTIVACIÓN POR DINERO!"));
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] ¡ACTIVACIÓN POR DINERO!"));
         bEnemyActivated = true;
         OnGameEventTriggered.Broadcast(EGameEventType::EnemyActivation);
         ShowEventWidget(EGameEventType::EnemyActivation);
     }
 }
 
-void UGameEventManager::CheckItemActivation()
+void ADungeonGameState::CheckItemActivation()
 {
     if (bEnemyActivated || !ActivationTriggerItem)
     {
@@ -133,7 +99,7 @@ void UGameEventManager::CheckItemActivation()
 
     if (!PlayerCharacter->InventoryComponent)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] CheckItemActivation: Sin inventario"));
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] CheckItemActivation: Sin inventario"));
         return;
     }
 
@@ -143,7 +109,7 @@ void UGameEventManager::CheckItemActivation()
     {
         if (Entry.ItemData && Entry.ItemData == ActivationTriggerItem && Entry.Quantity > 0)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] ¡ACTIVACIÓN POR ITEM: %s!"), *ActivationTriggerItem->GetName());
+            UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] ¡ACTIVACIÓN POR ITEM: %s!"), *ActivationTriggerItem->GetName());
             bEnemyActivated = true;
             OnGameEventTriggered.Broadcast(EGameEventType::EnemyActivation);
             ShowEventWidget(EGameEventType::EnemyActivation);
@@ -152,11 +118,11 @@ void UGameEventManager::CheckItemActivation()
     }
 }
 
-void UGameEventManager::ShowEventWidget(EGameEventType EventType)
+void ADungeonGameState::ShowEventWidget(EGameEventType EventType)
 {
     if (!PlayerCharacter)
     {
-        UE_LOG(LogTemp, Error, TEXT("[GameEventManager] ShowEventWidget: Sin jugador"));
+        UE_LOG(LogTemp, Error, TEXT("[DungeonGameState] ShowEventWidget: Sin jugador"));
         return;
     }
 
@@ -177,7 +143,7 @@ void UGameEventManager::ShowEventWidget(EGameEventType EventType)
 
     if (!WidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] ShowEventWidget: WidgetClass no configurado para evento %d"), (int32)EventType);
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] ShowEventWidget: WidgetClass no configurado para evento %d"), (int32)EventType);
         return;
     }
 
@@ -194,7 +160,7 @@ void UGameEventManager::ShowEventWidget(EGameEventType EventType)
         CurrentWidget = NewWidget;
         NewWidget->AddToViewport();
 
-        UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] ShowEventWidget: Widget mostrado para evento %d"), (int32)EventType);
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] ShowEventWidget: Widget mostrado para evento %d"), (int32)EventType);
 
         // Cambiar modo de input a UI
         if (APlayerController* PC = PlayerCharacter->GetController<APlayerController>())
@@ -204,11 +170,11 @@ void UGameEventManager::ShowEventWidget(EGameEventType EventType)
             InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
             PC->SetInputMode(InputMode);
             PC->bShowMouseCursor = true;
-            UE_LOG(LogTemp, Warning, TEXT("[GameEventManager] ShowEventWidget: Modo de input cambiado a UI"));
+            UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] ShowEventWidget: Modo de input cambiado a UI"));
         }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("[GameEventManager] ShowEventWidget: Error al crear widget"));
+        UE_LOG(LogTemp, Error, TEXT("[DungeonGameState] ShowEventWidget: Error al crear widget"));
     }
 }

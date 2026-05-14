@@ -4,7 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "GameEventConfig.generated.h"
 
-class UGameEventManager;
+class ADungeonGameState;
 class UItemData;
 class UUserWidget;
 
@@ -20,13 +20,13 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-    // ==================== CONFIGURACIÓN DE ACTIVACIÓN ====================
+    // ==================== CONFIGURACIï¿½N DE ACTIVACIï¿½N ====================
 
     // Cantidad de dinero necesaria para activar el evento
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Event|Activation")
     float ActivationMoneyThreshold = 0.f;
 
-    // Item específico que activa el evento (opcional)
+    // Item especï¿½fico que activa el evento (opcional)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Event|Activation")
     TObjectPtr<UItemData> ActivationTriggerItem = nullptr;
 
@@ -36,7 +36,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Event|Widgets")
     TSubclassOf<UUserWidget> StartWidgetClass;
 
-    // Widget de activación (cuando se activa el enemigo)
+    // Widget de activaciï¿½n (cuando se activa el enemigo)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Event|Widgets")
     TSubclassOf<UUserWidget> EndWidgetClass;
 
@@ -50,7 +50,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Event|Options")
     bool bShowStartWidget = false;
 
-    // Forzar activación inmediata (para pruebas)
+    // Forzar activaciï¿½n inmediata (para pruebas)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Event|Debug")
     bool bForceActivation = false;
 
@@ -60,5 +60,5 @@ public:
 
 private:
     UPROPERTY()
-    UGameEventManager* EventManager;
+    TObjectPtr<ADungeonGameState> GameState;
 };

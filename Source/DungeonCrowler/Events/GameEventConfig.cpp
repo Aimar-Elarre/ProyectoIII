@@ -1,5 +1,5 @@
 #include "GameEventConfig.h"
-#include "GameEventManager.h"
+#include "../Core/DungeonGameState.h"
 #include "../Player/MyPlayerCharacter.h"
 
 AGameEventConfig::AGameEventConfig()
@@ -11,26 +11,31 @@ void AGameEventConfig::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Obtener referencia al GameEventManager singleton
-    EventManager = &UGameEventManager::Get(this);
+    // Obtener referencia al GameState
+    GameState = GetWorld()->GetGameState<ADungeonGameState>();
+    if (!GameState)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[GameEventConfig] BeginPlay: No se pudo obtener ADungeonGameState"));
+        return;
+    }
 
     // Configurar el threshold de dinero
-    EventManager->ActivationMoneyThreshold = ActivationMoneyThreshold;
+    GameState->ActivationMoneyThreshold = ActivationMoneyThreshold;
 
-    // Configurar el item de activaci�n (si hay uno)
+    // Configurar el item de activación (si hay uno)
     if (ActivationTriggerItem)
     {
-        EventManager->ActivationTriggerItem = ActivationTriggerItem;
+        GameState->ActivationTriggerItem = ActivationTriggerItem;
     }
 
     // Configurar los widgets
-    EventManager->StartWidgetClass = StartWidgetClass;
-    EventManager->EndWidgetClass = EndWidgetClass;
+    GameState->StartWidgetClass = StartWidgetClass;
+    GameState->EndWidgetClass = EndWidgetClass;
 
     // Opciones de debug
     if (bForceActivation)
     {
-        EventManager->bEnemyActivated = true;
+        GameState->bEnemyActivated = true;
     }
 
     if (DebugGiveMoney > 0.f)

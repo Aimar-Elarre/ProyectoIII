@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/Object.h"
-#include "GameEventManager.generated.h"
+#include "GameFramework/GameStateBase.h"
+#include "DungeonGameState.generated.h"
 
 class UUserWidget;
 class AMyPlayerCharacter;
@@ -20,13 +20,12 @@ enum class EGameEventType : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGameEventTriggered, EGameEventType, EventType);
 
 UCLASS()
-class DUNGEONCROWLER_API UGameEventManager : public UObject
+class DUNGEONCROWLER_API ADungeonGameState : public AGameStateBase
 {
     GENERATED_BODY()
 
 public:
-    // Obtener instancia singleton
-    static UGameEventManager& Get(UObject* WorldContext = nullptr);
+    ADungeonGameState();
 
     // Inicializar con el jugador
     UFUNCTION(BlueprintCallable, Category = "Game Events")
@@ -40,12 +39,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Game Events")
     void ShowEventWidget(EGameEventType EventType);
 
-    // Reiniciar el manager
+    // Reiniciar el estado
     UFUNCTION(BlueprintCallable, Category = "Game Events")
     void Reset();
 
     // ==================== PROPIEDADES ====================
-    
+
     // Configuración de activación
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game Events|Activation")
     float ActivationMoneyThreshold = 0.f;
@@ -85,14 +84,7 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Game Events")
     FOnGameEventTriggered OnGameEventTriggered;
 
-protected:
-    UGameEventManager();
-    virtual ~UGameEventManager() override;
-
 private:
     void CheckMoneyActivation();
     void CheckItemActivation();
-
-    // Mapa de instancias por mundo
-    static TMap<UWorld*, UGameEventManager*> Instances;
 };

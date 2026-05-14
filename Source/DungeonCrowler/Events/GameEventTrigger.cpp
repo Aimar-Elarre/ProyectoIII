@@ -1,5 +1,5 @@
 #include "GameEventTrigger.h"
-#include "GameEventManager.h"
+#include "../Core/DungeonGameState.h"
 #include "Components/BoxComponent.h"
 #include "../Player/MyPlayerCharacter.h"
 #include "Blueprint/UserWidget.h"
@@ -22,8 +22,8 @@ void AGameEventTrigger::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Obtener referencia al GameEventManager singleton
-    EventManager = &UGameEventManager::Get(this);
+    // Obtener referencia al GameState
+    GameState = GetWorld()->GetGameState<ADungeonGameState>();
 
     if (TriggerBox)
     {
@@ -51,19 +51,19 @@ void AGameEventTrigger::OnOverlapBegin(
         return;
     }
 
-    // Inicializar el GameEventManager con el jugador si no está inicializado
-    if (EventManager && !EventManager->bInitialized)
+    // Inicializar el GameState con el jugador si no está inicializado
+    if (GameState && !GameState->bInitialized)
     {
-        EventManager->Initialize(Player);
+        GameState->Initialize(Player);
     }
 
     // Verificar las condiciones de activación (dinero o item)
-    if (EventManager)
+    if (GameState)
     {
-        EventManager->CheckEnemyActivation();
+        GameState->CheckEnemyActivation();
 
         // Si el enemigo ya está activado, mostrar el widget
-        if (EventManager->bEnemyActivated && !bHasTriggered)
+        if (GameState->bEnemyActivated && !bHasTriggered)
         {
             bHasTriggered = true;
             ActivateEvent(Player);

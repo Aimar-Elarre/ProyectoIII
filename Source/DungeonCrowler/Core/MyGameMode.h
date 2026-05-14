@@ -4,6 +4,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "MyGameMode.generated.h"
 
+class ADungeonGameState;
+
 UCLASS()
 class DUNGEONCROWLER_API AMyGameMode : public AGameModeBase
 {

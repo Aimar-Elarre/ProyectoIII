@@ -11,13 +11,23 @@ void UInventoryWidget::NativeConstruct()
     Super::NativeConstruct();
 }
 
+void UInventoryWidget::NativeDestruct()
+{
+    Super::NativeDestruct();
+}
+
 void UInventoryWidget::InitInventory(UInventoryComponent* InInventoryComp)
 {
+    if (InventoryComp && InventoryComp != InInventoryComp)
+    {
+        InventoryComp->OnInventoryChanged.RemoveDynamic(this, &UInventoryWidget::OnInventoryChanged);
+    }
+
     InventoryComp = InInventoryComp;
 
     if (InventoryComp)
     {
-        InventoryComp->OnInventoryChanged.AddDynamic(this, &UInventoryWidget::OnInventoryChanged);
+        InventoryComp->OnInventoryChanged.AddUniqueDynamic(this, &UInventoryWidget::OnInventoryChanged);
         RefreshInventory();
     }
 }

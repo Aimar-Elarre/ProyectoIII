@@ -27,7 +27,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Trap")
     UStaticMeshComponent* TrapMesh;
 
-    // Zona de activación — cuando el jugador entra, empieza a disparar
+    // Zona de activaciï¿½n ï¿½ cuando el jugador entra, empieza a disparar
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Trap")
     UBoxComponent* ActivationTrigger;
 
@@ -35,7 +35,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Trap")
     UStaticMeshComponent* FireSpawnPoint;
 
-    // Clase del proyectil de fuego — asigna en el Blueprint
+    // Clase del proyectil de fuego ï¿½ asigna en el Blueprint
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap|Fire")
     TSubclassOf<AActor> FireProjectileClass;
 
@@ -47,11 +47,11 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap|Fire")
     float ProjectileSpeed = 800.f;
 
-    // Daño que hace al jugador
+    // Daï¿½o que hace al jugador
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap|Fire")
     float FireDamage = 25.f;
 
-    // Dirección de disparo (se puede rotar el actor en el editor)
+    // Direcciï¿½n de disparo (se puede rotar el actor en el editor)
     // Si bUseCustomDirection es false, usa el forward vector del actor
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap|Fire")
     bool bUseCustomDirection = false;
@@ -59,7 +59,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap|Fire", meta = (EditCondition = "bUseCustomDirection"))
     FRotator CustomFireDirection = FRotator::ZeroRotator;
 
-    // Tamaño de la zona de activación
+    // Tamaï¿½o de la zona de activaciï¿½n
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trap|Trigger")
     FVector ActivationTriggerSize = FVector(400.f, 400.f, 150.f);
 
@@ -68,7 +68,7 @@ public:
     FVector FireSpawnOffset = FVector(100.f, 0.f, 0.f);
 
 private:
-    bool bPlayerInRange = false;
+    int32 OverlapCount = 0;
     FTimerHandle FireTimerHandle;
 
     void StartFiring();

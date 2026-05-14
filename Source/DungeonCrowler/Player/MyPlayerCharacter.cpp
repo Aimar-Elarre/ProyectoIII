@@ -1,5 +1,7 @@
 #include "MyPlayerCharacter.h"
-
+#include "GameEventManager.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -16,24 +18,40 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
+    // Configuración básica de colisión y movimiento
     GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
     GetCapsuleComponent()->SetGenerateOverlapEvents(true);
 
-    SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-    SpringArm->SetupAttachment(RootComponent);
-    SpringArm->TargetArmLength = 0.f;
-    SpringArm->bUsePawnControlRotation = true;
-
-    Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-    Camera->SetupAttachment(SpringArm);
-    Camera->bUsePawnControlRotation = false;
-    Camera->SetRelativeLocation(FVector(0.f, 0.f, 64.f));
-
-    bUseControllerRotationYaw = true;
     bUseControllerRotationPitch = false;
     bUseControllerRotationRoll = false;
+    bUseControllerRotationYaw = false;
 
-    GetCharacterMovement()->bOrientRotationToMovement = false;
+    // Spring Arm atachado a la Mesh del personaje
+    SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+    SpringArm->SetupAttachment(RootComponent);
+
+    // Posición de la cámara respecto a la Mesh
+    SpringArm->TargetArmLength = 300.f;
+    SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 140.f));
+    SpringArm->SocketOffset = FVector(0.f, 0.f, 20.f);
+
+    // Colisión de cámara para que no atraviese paredes
+    SpringArm->bDoCollisionTest = true;
+    SpringArm->ProbeChannel = ECC_Camera;
+    SpringArm->ProbeSize = 24.0f;
+
+    // Sin retraso de cámara
+    SpringArm->bEnableCameraLag = false;
+    SpringArm->bEnableCameraRotationLag = false;
+
+    // Cámara
+    Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+    Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+    Camera->SetRelativeLocation(FVector::ZeroVector);
+    Camera->SetRelativeRotation(FRotator::ZeroRotator);
+
+
+    // Movimiento físico
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     GetCharacterMovement()->JumpZVelocity = 420.f;
     GetCharacterMovement()->GravityScale = 1.6f;
@@ -45,14 +63,24 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
     CurrentCapsuleHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
+    // Audio de pasos
     FootstepAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FootstepAudioComponent"));
     FootstepAudioComponent->SetupAttachment(RootComponent);
     FootstepAudioComponent->bAutoActivate = false;
     FootstepAudioComponent->bIsUISound = false;
 
+    // Niagara del dash
+    DashNiagara = CreateDefaultSubobject<UNiagaraComponent>(TEXT("DashNiagara"));
+    DashNiagara->SetupAttachment(GetMesh());
+    DashNiagara->SetRelativeLocation(DashVFXOffset);
+    DashNiagara->SetRelativeRotation(FRotator::ZeroRotator);
+    DashNiagara->bAutoActivate = false;
+    DashNiagara->SetAutoActivate(false);
+    DashNiagara->Deactivate();
+
+    // Inventario
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
-
 void AMyPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
@@ -70,6 +98,8 @@ void AMyPlayerCharacter::BeginPlay()
 
         CurrentMeshScale = GetMesh()->GetRelativeScale3D();
         MeshStandingScale = CurrentMeshScale;
+
+        InitialMeshRelativeTransform = GetMesh()->GetRelativeTransform();
     }
 
     if (Camera)
@@ -103,6 +133,37 @@ void AMyPlayerCharacter::BeginPlay()
 
     RefreshLegacyCarryFromInventory();
     UpdateMovementSpeed();
+}
+
+void AMyPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    GetWorldTimerManager().ClearTimer(RespawnTimerHandle);
+    GetWorldTimerManager().ClearTimer(SlideTimerHandle);
+    GetWorldTimerManager().ClearTimer(DashCooldownHandle);
+    GetWorldTimerManager().ClearTimer(HintTimerHandle);
+    GetWorldTimerManager().ClearTimer(InventoryTutorialSecondHintHandle);
+
+    if (GetMesh() && GetMesh()->IsSimulatingPhysics())
+    {
+        GetMesh()->SetSimulatePhysics(false);
+        GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+    }
+
+    if (PlayerHUD)
+    {
+        PlayerHUD->RemoveFromParent();
+        PlayerHUD = nullptr;
+    }
+
+    if (InventoryWidgetInstance)
+    {
+        InventoryWidgetInstance->RemoveFromParent();
+        InventoryWidgetInstance = nullptr;
+    }
+
+    UGameEventManager::CleanupForWorld(GetWorld());
+
+    Super::EndPlay(EndPlayReason);
 }
 
 void AMyPlayerCharacter::Tick(float DeltaTime)
@@ -182,62 +243,61 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         PlayerHUD->UpdateCarry(ItemsCarried, FMath::Max(ItemsCarried, 1));
     }
 
-    const float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
-
-    CurrentCapsuleHeight = FMath::FInterpTo(
-        CurrentCapsuleHeight,
-        TargetHeight,
-        DeltaTime,
-        CrouchSpeed
-    );
-
-    if (GetMesh())
+    if (!bIsDead)
     {
-        const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
+        const float TargetHeight = bIsCrouching ? CrouchHeight : StandingHeight;
 
-        CurrentMeshZ = FMath::FInterpTo(
-            CurrentMeshZ,
-            TargetMeshZ,
+        CurrentCapsuleHeight = FMath::FInterpTo(
+            CurrentCapsuleHeight,
+            TargetHeight,
             DeltaTime,
             CrouchSpeed
         );
 
-        FVector MeshLocation = GetMesh()->GetRelativeLocation();
-        MeshLocation.Z = CurrentMeshZ;
-        GetMesh()->SetRelativeLocation(MeshLocation);
+        if (GetMesh())
+        {
+            const float TargetMeshZ = bIsCrouching ? MeshCrouchingZ : MeshStandingZ;
 
-        const FVector TargetScale = bIsCrouching ? MeshCrouchingScale : MeshStandingScale;
+            CurrentMeshZ = FMath::FInterpTo(
+                CurrentMeshZ,
+                TargetMeshZ,
+                DeltaTime,
+                CrouchSpeed
+            );
 
-        CurrentMeshScale = FMath::VInterpTo(
-            CurrentMeshScale,
-            TargetScale,
-            DeltaTime,
-            CrouchSpeed
-        );
+            FVector MeshLocation = GetMesh()->GetRelativeLocation();
+            MeshLocation.Z = CurrentMeshZ;
+            GetMesh()->SetRelativeLocation(MeshLocation);
 
-        GetMesh()->SetRelativeScale3D(CurrentMeshScale);
+            const FVector TargetScale = bIsCrouching ? MeshCrouchingScale : MeshStandingScale;
+
+            CurrentMeshScale = FMath::VInterpTo(
+                CurrentMeshScale,
+                TargetScale,
+                DeltaTime,
+                CrouchSpeed
+            );
+
+            GetMesh()->SetRelativeScale3D(CurrentMeshScale);
+        }
+
+        GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
     }
-
-    GetCapsuleComponent()->SetCapsuleHalfHeight(CurrentCapsuleHeight, true);
 
     if (Camera)
     {
-        const float TargetFOV = bIsRunning ? RunFOV : NormalFOV;
+        // 1. Determinar el FOV base según si corremos o no
+        float TargetBaseFOV = bIsRunning ? RunFOV : NormalFOV;
 
-        CurrentDashFOVOffset = FMath::FInterpTo(
-            CurrentDashFOVOffset,
-            0.f,
-            DeltaTime,
-            DashFOVRecoverSpeed
-        );
+        // 2. Recuperar el offset del Dash poco a poco hacia 0
+        // Usamos una velocidad alta para que el efecto de "vuelta a la normalidad" sea fluido
+        CurrentDashFOVOffset = FMath::FInterpTo(CurrentDashFOVOffset, 0.f, DeltaTime, DashFOVRecoverSpeed);
 
-        const float FinalTargetFOV = TargetFOV + CurrentDashFOVOffset;
-        const float NewFOV = FMath::FInterpTo(
-            Camera->FieldOfView,
-            FinalTargetFOV,
-            DeltaTime,
-            FOVInterpSpeed
-        );
+        // 3. El FOV final es la suma de ambos
+        float FinalTargetFOV = TargetBaseFOV + CurrentDashFOVOffset;
+
+        // 4. Aplicamos la interpolación suave para que no haya saltos bruscos
+        float NewFOV = FMath::FInterpTo(Camera->FieldOfView, FinalTargetFOV, DeltaTime, FOVInterpSpeed);
 
         Camera->SetFieldOfView(NewFOV);
     }
@@ -248,7 +308,7 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
     }
 }
 
-void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
+void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData, FVector Scale)
 {
     if (!InventoryComponent || !ItemData || !ItemData->PickupActorClass)
     {
@@ -277,7 +337,7 @@ void AMyPlayerCharacter::DropSpecificItem(const UItemData* ItemData)
     SpawnedPickup->SetItemData(ItemData);
 
     const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
-    SpawnedPickup->SpawnAsDropped(DropImpulse);
+    SpawnedPickup->SpawnAsDropped(DropImpulse, Scale);
 
     InventoryComponent->RemoveItem(ItemData, 1);
     RefreshLegacyCarryFromInventory();
@@ -329,7 +389,7 @@ void AMyPlayerCharacter::MoveForward(float Value)
         const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
 
         const FVector ForwardDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
-        AddMovementInput(ForwardDir, Value);
+        GetMovementComponent()->AddInputVector(ForwardDir * Value, false );
 
         const float Loudness = bIsRunning ? 0.8f : 0.4f;
         MakeMovementNoise(Loudness);
@@ -344,7 +404,7 @@ void AMyPlayerCharacter::MoveRight(float Value)
         const FRotator YawRot(0.f, ControlRot.Yaw, 0.f);
 
         const FVector RightDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
-        AddMovementInput(RightDir, Value);
+        GetMovementComponent()->AddInputVector(RightDir * Value, false);
 
         const float Loudness = bIsRunning ? 0.8f : 0.4f;
         MakeMovementNoise(Loudness);
@@ -502,9 +562,7 @@ void AMyPlayerCharacter::StopSlide()
 
 void AMyPlayerCharacter::Dash()
 {
-    if (!bDashUnlocked) return;
-    if (!bCanDash) return;
-    if (!bHasJumped) return;
+    if (!bDashUnlocked || !bCanDash || !bHasJumped) return;
     if (GetCharacterMovement()->IsMovingOnGround()) return;
 
     bCanDash = false;
@@ -514,9 +572,43 @@ void AMyPlayerCharacter::Dash()
     DashDir.Z = 0.f;
     DashDir.Normalize();
 
-    LaunchCharacter(DashDir * DashStrength, true, false);
-
     CurrentDashFOVOffset = DashFOVBoost;
+
+    if (Camera)
+    {
+        Camera->SetFieldOfView(Camera->FieldOfView + DashFOVBoost);
+    }
+
+    // VFX del dash pegado al personaje
+    if (DashNiagara)
+    {
+        GetWorldTimerManager().ClearTimer(DashVFXTimerHandle);
+
+        DashNiagara->AttachToComponent(
+            GetMesh(),
+            FAttachmentTransformRules::KeepRelativeTransform
+        );
+
+        DashNiagara->SetRelativeLocation(DashVFXOffset);
+        DashNiagara->SetRelativeRotation(FRotator::ZeroRotator);
+
+        DashNiagara->Activate(true);
+
+        GetWorldTimerManager().SetTimer(
+            DashVFXTimerHandle,
+            [this]()
+            {
+                if (DashNiagara)
+                {
+                    DashNiagara->Deactivate();
+                }
+            },
+            DashVFXDuration,
+            false
+        );
+    }
+
+    LaunchCharacter(DashDir * DashStrength, true, false);
 
     if (DashSound)
     {
@@ -636,6 +728,13 @@ void AMyPlayerCharacter::MakeMovementNoise(float Loudness)
     );
 }
 
+void AMyPlayerCharacter::ApplyRagdollImpulse(FVector ImpactPoint, FVector ImpulseDirection, float Strength)
+{
+    if (!bIsDead || !GetMesh()) return;
+
+    GetMesh()->AddImpulseAtLocation(ImpulseDirection.GetSafeNormal() * Strength, ImpactPoint);
+}
+
 void AMyPlayerCharacter::TakeDamageCustom(float DamageAmount)
 {
     if (bIsDead) return;
@@ -659,6 +758,11 @@ void AMyPlayerCharacter::Die()
 
     StopFootstepAudio();
     GetCharacterMovement()->DisableMovement();
+
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+    GetMesh()->SetSimulatePhysics(true);
+    
 
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
@@ -718,6 +822,12 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
         return;
     }
 
+    GetMesh()->SetSimulatePhysics(false);
+    GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+    GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+    GetMesh()->SetRelativeTransform(InitialMeshRelativeTransform);
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
     SetActorLocation(LastCheckpointLocation);
 
     CurrentHealth = MaxHealth;
@@ -726,6 +836,9 @@ void AMyPlayerCharacter::RespawnAtCheckpoint()
     bIsRunning = false;
     bIsSliding = false;
     bIsCrouching = false;
+
+    CurrentMeshZ = InitialMeshRelativeTransform.GetLocation().Z;
+    CurrentMeshScale = InitialMeshRelativeTransform.GetScale3D();
 
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->GroundFriction = OriginalGroundFriction;
@@ -777,7 +890,7 @@ void AMyPlayerCharacter::DropItem()
     SpawnedPickup->SetItemData(Entry.ItemData);
 
     const FVector DropImpulse = GetActorForwardVector() * 350.f + FVector(0.f, 0.f, 300.f);
-    SpawnedPickup->SpawnAsDropped(DropImpulse);
+    SpawnedPickup->SpawnAsDropped(DropImpulse, Entry.DropScale);
 
     InventoryComponent->RemoveItem(Entry.ItemData, 1);
     RefreshLegacyCarryFromInventory();
@@ -945,16 +1058,19 @@ void AMyPlayerCharacter::ShowInventory()
     if (!InventoryWidgetInstance && InventoryWidgetClass)
     {
         InventoryWidgetInstance = CreateWidget<UUserWidget>(PC, InventoryWidgetClass);
+    }
 
+    if (InventoryWidgetInstance)
+    {
         if (UInventoryWidget* InvWidget = Cast<UInventoryWidget>(InventoryWidgetInstance))
         {
             InvWidget->InitInventory(InventoryComponent);
         }
-    }
 
-    if (InventoryWidgetInstance && !InventoryWidgetInstance->IsInViewport())
-    {
-        InventoryWidgetInstance->AddToViewport(10);
+        if (!InventoryWidgetInstance->IsInViewport())
+        {
+            InventoryWidgetInstance->AddToViewport(10);
+        }
     }
 
     bInventoryOpen = true;

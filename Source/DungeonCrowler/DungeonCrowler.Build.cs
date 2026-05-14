@@ -29,7 +29,8 @@ public class DungeonCrowler : ModuleRules
         "Engine",
         "InputCore",
         "AIModule",
-        "EnhancedInput"
+        "EnhancedInput",
+        "Niagara"
             });
         PrivateDependencyModuleNames.AddRange(new string[] {  });
 

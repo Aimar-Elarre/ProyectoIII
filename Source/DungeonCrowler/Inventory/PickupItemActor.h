@@ -27,12 +27,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Pickup")
     void TryPickup(AMyPlayerCharacter* Player);
 
-    // Lanza el objeto con física al soltarlo (estilo Fortnite)
+    // Lanza el objeto con física al soltarlo 
     UFUNCTION(BlueprintCallable, Category = "Pickup")
-    void SpawnAsDropped(FVector LaunchVelocity);
+    void SpawnAsDropped(FVector LaunchVelocity, FVector Scale = FVector(1.f, 1.f, 1.f));
 
 protected:
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void Tick(float DeltaTime) override;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickup")
@@ -53,6 +54,9 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "Animation")
     float OscillationSpeed = 2.f;
+
+    UPROPERTY(EditAnywhere, Category = "Animation")
+    float RotationSpeed = 90.f;
 
 private:
     FVector BaseLocation;

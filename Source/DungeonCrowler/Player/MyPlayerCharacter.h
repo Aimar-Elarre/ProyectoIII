@@ -3,13 +3,17 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
 #include "Sound/SoundBase.h"
 #include "Components/AudioComponent.h"
-#include "../Core/MyPlayerHUD.h"
-#include "../Inventory/InventoryComponent.h"
+#include "MyPlayerHUD.h"
+#include "InventoryComponent.h"
+#include "NiagaraComponent.h"
+
 #include "MyPlayerCharacter.generated.h"
 
 class APickupItemActor;
@@ -19,184 +23,201 @@ class UItemData;
 UCLASS()
 class DUNGEONCROWLER_API AMyPlayerCharacter : public ACharacter
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    AMyPlayerCharacter();
+	AMyPlayerCharacter();
 
 protected:
-    virtual void BeginPlay() override;
-    UPROPERTY()
-    TObjectPtr<APickupItemActor> NearbyPickup = nullptr;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	UPROPERTY()
+	TObjectPtr<APickupItemActor> NearbyPickup = nullptr;
 
 public:
-    virtual void Tick(float DeltaTime) override;
-    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-    // Movimiento
-    void MoveForward(float Value);
-    void MoveRight(float Value);
-    void StartRun();
-    void StopRun();
-    void StartJump();
-    void StopJump();
-    void Turn(float Value);
-    void LookUp(float Value);
-    void StartCrouch();
-    void StopCrouch();
-    void StartSlide();
-    void StopSlide();
-    void Dash();
-    void ResetDash();
-    void UpdateMovementSpeed();
+	// Movimiento
+	void MoveForward(float Value);
+	void MoveRight(float Value);
+	void StartRun();
+	void StopRun();
+	void StartJump();
+	void StopJump();
+	void Turn(float Value);
+	void LookUp(float Value);
+	void StartCrouch();
+	void StopCrouch();
+	void StartSlide();
+	void StopSlide();
+	void Dash();
+	void ResetDash();
+	void UpdateMovementSpeed();
 
-    // Audio / IA
-    void UpdateFootstepAudio(float ForwardValue);
-    void StopFootstepAudio();
-    void MakeMovementNoise(float Loudness);
+	// Audio / IA
+	void UpdateFootstepAudio(float ForwardValue);
+	void StopFootstepAudio();
+	void MakeMovementNoise(float Loudness);
 
-    // Vida / Respawn
-    void Die();
-    void KillPlayer();
-    void SetLastCheckpoint(FVector NewLocation);
-    void RespawnAtCheckpoint();
-    void TakeDamageCustom(float DamageAmount);
+	// Vida / Respawn
+	void Die();
+	void KillPlayer();
+	void SetLastCheckpoint(FVector NewLocation);
+	void RespawnAtCheckpoint();
+	void TakeDamageCustom(float DamageAmount);
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
-    FVector MeshStandingScale = FVector(1.0f, 1.0f, 1.0f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
+	UNiagaraSystem* DashVFX;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash|VFX")
+	UNiagaraComponent* DashNiagara;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
-    FVector MeshCrouchingScale = FVector(0.92f, 0.92f, 0.88f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
+	FVector DashVFXOffset = FVector(0.f, 0.f, -40.f);
 
-    FVector CurrentMeshScale = FVector(1.0f, 1.0f, 1.0f);
+	UFUNCTION(BlueprintCallable, Category = "Ragdoll")
+	void ApplyRagdollImpulse(FVector ImpactPoint, FVector ImpulseDirection, float Strength = 60000.f);
 
-    UFUNCTION(BlueprintCallable, Category = "Pickup")
-    void TryInteractPickup();
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+	FVector MeshStandingScale = FVector(1.0f, 1.0f, 1.0f);
 
-    void SetNearbyPickup(APickupItemActor* NewPickup);
-    void ClearNearbyPickup(APickupItemActor* PickupToClear);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+	FVector MeshCrouchingScale = FVector(0.92f, 0.92f, 0.88f);
 
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    void DropSpecificItem(const UItemData* ItemData);
-    // Sprint
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
-    bool bSprintUnlocked = false;
+	FVector CurrentMeshScale = FVector(1.0f, 1.0f, 1.0f);
 
-    UFUNCTION(BlueprintCallable, Category = "Run")
-    bool IsSprintUnlocked() const;
+	UFUNCTION(BlueprintCallable, Category = "Pickup")
+	void TryInteractPickup();
 
-    UFUNCTION(BlueprintCallable, Category = "Run")
-    void UnlockSprint();
+	void SetNearbyPickup(APickupItemActor* NewPickup);
+	void ClearNearbyPickup(APickupItemActor* PickupToClear);
 
-    // Dash
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Dash")
-    bool bDashUnlocked = false;
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void DropSpecificItem(const UItemData* ItemData, FVector Scale = FVector(1.f, 1.f, 1.f));
+	// Sprint
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Run")
+	bool bSprintUnlocked = false;
 
-    UFUNCTION(BlueprintCallable, Category = "Dash")
-    bool IsDashUnlocked() const;
+	UFUNCTION(BlueprintCallable, Category = "Run")
+	bool IsSprintUnlocked() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Dash")
-    void UnlockDash();
+	UFUNCTION(BlueprintCallable, Category = "Run")
+	void UnlockSprint();
 
-    // Inventario desbloqueable
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory")
-    bool bInventoryUnlocked = false;
+	// Dash
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Dash")
+	bool bDashUnlocked = false;
 
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool IsInventoryUnlocked() const;
+	UFUNCTION(BlueprintCallable, Category = "Dash")
+	bool IsDashUnlocked() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    void UnlockInventory();
+	UFUNCTION(BlueprintCallable, Category = "Dash")
+	void UnlockDash();
 
-    // Hints
-    UFUNCTION(BlueprintCallable, Category = "UI")
-    void ShowHintMessage(const FString& Message);
+	// Inventario desbloqueable
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Inventory")
+	bool bInventoryUnlocked = false;
 
-    UFUNCTION(BlueprintCallable, Category = "UI")
-    void HideHintMessage();
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool IsInventoryUnlocked() const;
 
-    // Inventario
-    void DropItem();
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void UnlockInventory();
 
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    void AddCarriedItem(int32 Amount = 1);
+	// Hints
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ShowHintMessage(const FString& Message);
 
-    UFUNCTION(BlueprintPure, Category = "Inventory")
-    int32 GetItemsCarried() const;
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void HideHintMessage();
 
-    UFUNCTION(BlueprintPure, Category = "Stats")
-    float GetCurrentHealthValue() const;
+	// Inventario
+	void DropItem();
 
-    UFUNCTION(BlueprintPure, Category = "Stamina")
-    float GetStaminaPercent() const;
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddCarriedItem(int32 Amount = 1);
 
-    // Debug
-    UFUNCTION(BlueprintCallable, Category = "Debug")
-    void Debug_UnlockSprint();
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 GetItemsCarried() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Debug")
-    void Debug_UnlockDash();
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	float GetCurrentHealthValue() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Debug")
-    void Debug_FillStamina();
+	UFUNCTION(BlueprintPure, Category = "Stamina")
+	float GetStaminaPercent() const;
 
-    // Inventario nuevo
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TObjectPtr<UInventoryComponent> InventoryComponent = nullptr;
+	// Debug
+	UFUNCTION(BlueprintCallable, Category = "Debug")
+	void Debug_UnlockSprint();
 
-    // Slide
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slide")
-    bool bIsSliding = false;
+	UFUNCTION(BlueprintCallable, Category = "Debug")
+	void Debug_UnlockDash();
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
-    float SlideImpulse = 1200.f;
+	UFUNCTION(BlueprintCallable, Category = "Debug")
+	void Debug_FillStamina();
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
-    float SlideFriction = 0.05f;
+	// Inventario nuevo
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TObjectPtr<UInventoryComponent> InventoryComponent = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
-    float SlideDuration = 0.75f;
+	// Slide
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slide")
+	bool bIsSliding = false;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slide")
-    float OriginalGroundFriction = 8.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
+	float SlideImpulse = 1200.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
-    float MinSlideSpeed = 350.f;
-    int32 LastItemsCarriedForMovement = -1;
-    FTimerHandle SlideTimerHandle;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
+	float SlideFriction = 0.05f;
 
-    // Checkpoint / Respawn
-    FTimerHandle RespawnTimerHandle;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
+	float SlideDuration = 0.75f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
-    bool bHasCheckpoint = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slide")
+	float OriginalGroundFriction = 8.f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
-    bool bIsDead = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slide")
+	float MinSlideSpeed = 350.f;
+	int32 LastItemsCarriedForMovement = -1;
+	FTimerHandle SlideTimerHandle;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
-    FVector LastCheckpointLocation = FVector::ZeroVector;
+	// Checkpoint / Respawn
+	FTimerHandle RespawnTimerHandle;
 
-    // Dash
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashStrength = 2000.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
+	bool bHasCheckpoint = false;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashCooldown = 1.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
+	bool bIsDead = false;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash")
-    bool bCanDash = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Checkpoint")
+	FVector LastCheckpointLocation = FVector::ZeroVector;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashFOVBoost = 8.f;
+	// Dash
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
+	float DashStrength = 2000.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashFOVRecoverSpeed = 10.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
+	float DashCooldown = 1.f;
 
-    float CurrentDashFOVOffset = 0.f;
-    FTimerHandle DashCooldownHandle;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash|VFX")
+	float DashVFXDuration = 0.35f;
 
-// DINERO / MONEY
+	FTimerHandle DashVFXTimerHandle;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash")
+	bool bCanDash = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
+	float DashFOVBoost = 8.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
+	float DashFOVRecoverSpeed = 10.f;
+
+
+	FTimerHandle DashCooldownHandle;
+
+	// DINERO / MONEY
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	float CurrentMoney = 0.0f;
 
@@ -207,145 +228,153 @@ public:
 	float GetCurrentMoney() const;
 
 	// Crouch
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crouch")
-    bool bIsCrouching = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crouch")
+	bool bIsCrouching = false;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
-    float CrouchHeight = 44.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+	float CrouchHeight = 44.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
-    float StandingHeight = 88.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+	float StandingHeight = 88.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
-    float CrouchSpeed = 8.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+	float CrouchSpeed = 8.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
-    float MeshStandingZ = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+	float MeshStandingZ = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
-    float MeshCrouchingZ = -25.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crouch")
+	float MeshCrouchingZ = -25.f;
 
-    float CurrentMeshZ = 0.f;
-    float CurrentCapsuleHeight = 88.f;
+	float CurrentMeshZ = 0.f;
+	float CurrentCapsuleHeight = 88.f;
 
-    // Movement
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-    float WalkSpeed = 600.f;
+	// Movement
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float WalkSpeed = 600.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-    float RunSpeed = 1000.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float RunSpeed = 1000.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-    float JumpStrength = 600.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float JumpStrength = 600.f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
-    bool bIsRunning = false;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bIsRunning = false;
 
-    bool bRunKeyHeld = false;
-    bool bHasJumped = false;
+	bool bRunKeyHeld = false;
+	bool bHasJumped = false;
 
-    // Cámara / Mouse
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouse")
-    float MouseSensitivity = 1.f;
+	// Cámara / Mouse
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouse")
+	float MouseSensitivity = 1.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
-    float NormalFOV = 90.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
+	float FOVInterpSpeed = 8.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
-    float RunFOV = 98.f;
+	// En la sección de Camera de tu .h
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	float NormalFOV = 90.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
-    float FOVInterpSpeed = 8.f;
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	float RunFOV = 110.f; // Un valor más alto (110) da más sensación de velocidad
 
-    // Stamina
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
-    float MaxStamina = 100.f;
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	float DashFOVExtra = 20.f; // Cuánto FOV extra suma el dash
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
-    float CurrentStamina = 100.f;
+	float CurrentDashFOVOffset = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
-    float StaminaDrainRate = 30.f;
+	// Stamina
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
+	float MaxStamina = 100.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
-    float StaminaRegenRate = 20.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
+	float CurrentStamina = 100.f;
 
-    // Vida
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float MaxHealth = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
+	float StaminaDrainRate = 30.f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-    float CurrentHealth = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stamina")
+	float StaminaRegenRate = 20.f;
 
-    // Inventario / peso legacy temporal
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    int32 ItemsCarried = 0;
+	// Vida
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float MaxHealth = 100.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
-    float SpeedPenaltyPerItem = 0.05f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	float CurrentHealth = 0.f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
-    float MinSpeedMultiplier = 0.4f;
+	// Inventario / peso legacy temporal
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	int32 ItemsCarried = 0;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TSubclassOf<APickupItemActor> PickupItemClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+	float SpeedPenaltyPerItem = 0.05f;
 
-    // UI
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-    TSubclassOf<UUserWidget> PlayerHUDClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+	float MinSpeedMultiplier = 0.4f;
 
-    UPROPERTY()
-    TObjectPtr<UMyPlayerHUD> PlayerHUD = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TSubclassOf<APickupItemActor> PickupItemClass;
 
-    // Cámara
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-    TObjectPtr<USpringArmComponent> SpringArm = nullptr;
+	// UI
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UUserWidget> PlayerHUDClass;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-    TObjectPtr<UCameraComponent> Camera = nullptr;
+	UPROPERTY()
+	TObjectPtr<UMyPlayerHUD> PlayerHUD = nullptr;
 
-    // Audio
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    TObjectPtr<USoundBase> FootstepSound = nullptr;
+	// Cámara
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	TObjectPtr<USpringArmComponent> SpringArm = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    TObjectPtr<USoundBase> JumpSound = nullptr;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	TObjectPtr<UCameraComponent> Camera = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    TObjectPtr<USoundBase> DashSound = nullptr;
+	// Audio
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	TObjectPtr<USoundBase> FootstepSound = nullptr;
 
-    UPROPERTY(VisibleAnywhere, Category = "Audio")
-    TObjectPtr<UAudioComponent> FootstepAudioComponent = nullptr;
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	TObjectPtr<USoundBase> JumpSound = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    float WalkStepInterval = 0.5f;
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	TObjectPtr<USoundBase> DashSound = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    float RunStepInterval = 0.3f;
+	UPROPERTY(VisibleAnywhere, Category = "Audio")
+	TObjectPtr<UAudioComponent> FootstepAudioComponent = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "Audio")
-    float FootstepBlockAfterJump = 0.25f;
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	float WalkStepInterval = 0.5f;
 
-    float LastFootstepTime = 0.f;
-    float FootstepBlockedUntil = 0.f;
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	float RunStepInterval = 0.3f;
+
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	float FootstepBlockAfterJump = 0.25f;
+
+	float LastFootstepTime = 0.f;
+	float FootstepBlockedUntil = 0.f;
+
+	FTransform InitialMeshRelativeTransform;
 
 private:
-    UPROPERTY(EditDefaultsOnly, Category = "UI")
-    TSubclassOf<UUserWidget> InventoryWidgetClass;
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> InventoryWidgetClass;
 
-    UPROPERTY()
-    TObjectPtr<UUserWidget> InventoryWidgetInstance = nullptr;
+	UPROPERTY()
+	TObjectPtr<UUserWidget> InventoryWidgetInstance = nullptr;
 
-    bool bInventoryOpen = false;
+	bool bInventoryOpen = false;
 
-    FTimerHandle HintTimerHandle;
-    FTimerHandle InventoryTutorialSecondHintHandle;
+	FTimerHandle HintTimerHandle;
+	FTimerHandle InventoryTutorialSecondHintHandle;
 
-    void Input_Inventory_Toggle();
-    void ShowInventory();
-    void HideInventory();
-    void RefreshLegacyCarryFromInventory();
+	void Input_Inventory_Toggle();
+	void ShowInventory();
+	void HideInventory();
+	void RefreshLegacyCarryFromInventory();
 
-    UFUNCTION()
-    void ShowInventorySecondHint();
+	UFUNCTION()
+	void ShowInventorySecondHint();
 };

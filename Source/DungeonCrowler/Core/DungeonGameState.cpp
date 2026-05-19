@@ -5,6 +5,9 @@
 #include "Blueprint/UserWidget.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/GameModeBase.h"
+#include "TutorialGameMode.h"
+#include "NormalGameMode.h"
 
 ADungeonGameState::ADungeonGameState()
 {
@@ -12,6 +15,14 @@ ADungeonGameState::ADungeonGameState()
     bInitialized = false;
     bEnemyActivated = false;
     bGameEnded = false;
+}
+
+void ADungeonGameState::BeginPlay()
+{
+    Super::BeginPlay();
+    
+    // Inicializar características del juego según el GameMode
+    InitializeGameFeatures();
 }
 
 void ADungeonGameState::Reset()
@@ -177,4 +188,63 @@ void ADungeonGameState::ShowEventWidget(EGameEventType EventType)
     {
         UE_LOG(LogTemp, Error, TEXT("[DungeonGameState] ShowEventWidget: Error al crear widget"));
     }
+}
+
+void ADungeonGameState::InitializeGameFeatures()
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] InitializeGameFeatures: World es NULO"));
+        return;
+    }
+
+    AGameModeBase* GameMode = World->GetAuthGameMode();
+    if (!GameMode)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] InitializeGameFeatures: GameMode es NULO"));
+        return;
+    }
+
+    // Detectar si es Normal GameMode
+    if (GameMode->IsA<ANormalGameMode>())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] InitializeGameFeatures: Detectado NormalGameMode - Desbloqueando todas las características"));
+        
+        // Esperar un frame para que el player esté completamente inicializado
+        World->GetTimerManager().SetTimerForNextTick(this, &ADungeonGameState::UnlockAllFeatures);
+    }
+    else if (GameMode->IsA<ATutorialGameMode>())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] InitializeGameFeatures: Detectado TutorialGameMode - Usando sistema de triggers"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] InitializeGameFeatures: GameMode desconocido"));
+    }
+}
+
+void ADungeonGameState::UnlockAllFeatures()
+{
+    // Obtener el player
+    APlayerController* PC = GetWorld()->GetFirstPlayerController();
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] UnlockAllFeatures: PlayerController es NULO"));
+        return;
+    }
+
+    AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(PC->GetPawn());
+    if (!Player)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] UnlockAllFeatures: Player es NULO o no es AMyPlayerCharacter"));
+        return;
+    }
+
+    // Desbloquear todas las características
+    UE_LOG(LogTemp, Warning, TEXT("[DungeonGameState] UnlockAllFeatures: Desbloqueando Inventario, Sprint y Dash"));
+    
+    Player->UnlockInventory();
+    Player->UnlockSprint();
+    Player->UnlockDash();
 }

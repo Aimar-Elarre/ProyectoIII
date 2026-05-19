@@ -27,6 +27,8 @@ class DUNGEONCROWLER_API ADungeonGameState : public AGameStateBase
 public:
     ADungeonGameState();
 
+    virtual void BeginPlay() override;
+
     // Inicializar con el jugador
     UFUNCTION(BlueprintCallable, Category = "Game Events")
     void Initialize(AMyPlayerCharacter* PlayerCharacter);
@@ -90,4 +92,10 @@ public:
 private:
     void CheckMoneyActivation();
     void CheckItemActivation();
+    
+    // Inicializar características del juego según el GameMode
+    void InitializeGameFeatures();
+    
+    // Desbloquear todas las características para el juego normal
+    void UnlockAllFeatures();
 };

@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -11,6 +14,8 @@
 #include "Sound/SoundBase.h"
 #include "Components/AudioComponent.h"
 #include "MyPlayerHUD.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "InventoryComponent.h"
 #include "NiagaraComponent.h"
 
@@ -66,6 +71,45 @@ public:
 	void SetLastCheckpoint(FVector NewLocation);
 	void RespawnAtCheckpoint();
 	void TakeDamageCustom(float DamageAmount);
+
+	// Linterna
+// Linterna
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	TObjectPtr<USceneComponent> FlashlightPivot = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	TObjectPtr<UStaticMeshComponent> FlashlightMesh = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	TObjectPtr<USpotLightComponent> FlashlightLight = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	bool bFlashlightOn = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	bool bFlashlightInspectMode = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	FName FlashlightSocketName = TEXT("FlashlightSocket");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	float FlashlightInspectSpeed = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	float FlashlightMaxYaw = 65.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Flashlight")
+	float FlashlightMaxPitch = 35.0f;
+
+	float FlashlightCurrentYaw = 0.0f;
+	float FlashlightCurrentPitch = 0.0f;
+
+	UFUNCTION(BlueprintCallable, Category = "Flashlight")
+	void ToggleFlashlight();
+
+	void StartFlashlightInspect();
+	void StopFlashlightInspect();
+	void UpdateFlashlightRotation();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash|VFX")
 	UNiagaraSystem* DashVFX;

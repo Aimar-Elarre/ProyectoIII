@@ -1,6 +1,9 @@
 #include "MyPlayerCharacter.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -50,6 +53,31 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     Camera->SetRelativeRotation(FRotator::ZeroRotator);
 
 
+    // Pivot de la linterna
+    FlashlightPivot = CreateDefaultSubobject<USceneComponent>(TEXT("FlashlightPivot"));
+    FlashlightPivot->SetupAttachment(GetMesh());
+    FlashlightPivot->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
+    FlashlightPivot->SetRelativeRotation(FRotator::ZeroRotator);
+
+    // Mesh visible de la linterna
+    FlashlightMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FlashlightMesh"));
+    FlashlightMesh->SetupAttachment(FlashlightPivot);
+    FlashlightMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FlashlightMesh->SetVisibility(true);
+
+    // Luz de la linterna
+    FlashlightLight = CreateDefaultSubobject<USpotLightComponent>(TEXT("FlashlightLight"));
+    FlashlightLight->SetupAttachment(FlashlightPivot);
+
+    FlashlightLight->SetRelativeLocation(FVector(20.f, 0.f, 0.f));
+    FlashlightLight->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
+
+    FlashlightLight->Intensity = 12000.f;
+    FlashlightLight->AttenuationRadius = 1600.f;
+    FlashlightLight->InnerConeAngle = 18.f;
+    FlashlightLight->OuterConeAngle = 32.f;
+    FlashlightLight->bUseInverseSquaredFalloff = true;
+    FlashlightLight->SetVisibility(false);
     // Movimiento físico
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     GetCharacterMovement()->JumpZVelocity = 420.f;
@@ -365,6 +393,9 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
     PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
     PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
+    PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &AMyPlayerCharacter::ToggleFlashlight);
+    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &AMyPlayerCharacter::StartFlashlightInspect);
+    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &AMyPlayerCharacter::StopFlashlightInspect);
 
     PlayerInputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockSprint);
     PlayerInputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AMyPlayerCharacter::Debug_UnlockDash);
@@ -633,11 +664,27 @@ void AMyPlayerCharacter::ResetDash()
 
 void AMyPlayerCharacter::Turn(float Value)
 {
+    if (bFlashlightInspectMode && FlashlightPivot)
+    {
+        FlashlightCurrentYaw += Value * FlashlightInspectSpeed;
+        FlashlightCurrentYaw = FMath::Clamp(FlashlightCurrentYaw, -FlashlightMaxYaw, FlashlightMaxYaw);
+        UpdateFlashlightRotation();
+        return;
+    }
+
     AddControllerYawInput(Value * MouseSensitivity);
 }
 
 void AMyPlayerCharacter::LookUp(float Value)
 {
+    if (bFlashlightInspectMode && FlashlightPivot)
+    {
+        FlashlightCurrentPitch += Value * FlashlightInspectSpeed;
+        FlashlightCurrentPitch = FMath::Clamp(FlashlightCurrentPitch, -FlashlightMaxPitch, FlashlightMaxPitch);
+        UpdateFlashlightRotation();
+        return;
+    }
+
     AddControllerPitchInput(Value * MouseSensitivity);
 }
 
@@ -678,6 +725,47 @@ void AMyPlayerCharacter::UpdateMovementSpeed()
             )
         );
     }
+}
+
+void AMyPlayerCharacter::StartFlashlightInspect()
+{
+    if (!FlashlightLight)
+    {
+        return;
+    }
+
+    if (!bFlashlightOn)
+    {
+        return;
+    }
+
+    bFlashlightInspectMode = true;
+}
+
+void AMyPlayerCharacter::StopFlashlightInspect()
+{
+    bFlashlightInspectMode = false;
+
+    // Si quieres que vuelva al centro al soltar click, deja esto activo.
+    FlashlightCurrentYaw = 0.0f;
+    FlashlightCurrentPitch = 0.0f;
+    UpdateFlashlightRotation();
+}
+
+void AMyPlayerCharacter::UpdateFlashlightRotation()
+{
+    if (!FlashlightPivot)
+    {
+        return;
+    }
+
+    FlashlightPivot->SetRelativeRotation(
+        FRotator(
+            FlashlightCurrentPitch,
+            FlashlightCurrentYaw,
+            0.0f
+        )
+    );
 }
 
 void AMyPlayerCharacter::UpdateFootstepAudio(float ForwardValue)
@@ -1033,6 +1121,26 @@ void AMyPlayerCharacter::Debug_UnlockSprint()
 void AMyPlayerCharacter::Debug_UnlockDash()
 {
     UnlockDash();
+}
+
+void AMyPlayerCharacter::ToggleFlashlight()
+{
+    if (!FlashlightLight)
+    {
+        return;
+    }
+
+    bFlashlightOn = !bFlashlightOn;
+    FlashlightLight->SetVisibility(bFlashlightOn);
+
+    if (bFlashlightOn)
+    {
+        ShowHintMessage(TEXT("Linterna encendida"));
+    }
+    else
+    {
+        ShowHintMessage(TEXT("Linterna apagada"));
+    }
 }
 
 void AMyPlayerCharacter::Debug_FillStamina()

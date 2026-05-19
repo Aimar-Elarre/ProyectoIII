@@ -77,7 +77,7 @@ AMyPlayerCharacter::AMyPlayerCharacter()
     FlashlightLight->InnerConeAngle = 18.f;
     FlashlightLight->OuterConeAngle = 32.f;
     FlashlightLight->bUseInverseSquaredFalloff = true;
-    FlashlightLight->SetVisibility(false);
+    FlashlightLight->SetVisibility(true);
     // Movimiento físico
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     GetCharacterMovement()->JumpZVelocity = 420.f;
@@ -114,6 +114,7 @@ void AMyPlayerCharacter::BeginPlay()
 
     CurrentHealth = MaxHealth;
     CurrentStamina = MaxStamina;
+    bSprintLockedUntilFull = false;
 
     GetCharacterMovement()->JumpZVelocity = JumpStrength;
     UpdateMovementSpeed();
@@ -132,6 +133,14 @@ void AMyPlayerCharacter::BeginPlay()
     if (Camera)
     {
         Camera->SetFieldOfView(NormalFOV);
+    }
+
+    // La linterna empieza encendida
+    bFlashlightOn = true;
+
+    if (FlashlightLight)
+    {
+        FlashlightLight->SetVisibility(true);
     }
 
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -210,7 +219,6 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         bIsRunning = false;
         UpdateMovementSpeed();
     }
-
     if (bIsRunning)
     {
         CurrentStamina -= StaminaDrainRate * DeltaTime;
@@ -219,6 +227,10 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         {
             CurrentStamina = 0.f;
             bIsRunning = false;
+
+            // Si se vacía la stamina, bloqueamos el sprint hasta que se rellene completa.
+            bSprintLockedUntilFull = true;
+
             UpdateMovementSpeed();
         }
     }
@@ -229,12 +241,19 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
             CurrentStamina += StaminaRegenRate * DeltaTime;
             CurrentStamina = FMath::Clamp(CurrentStamina, 0.f, MaxStamina);
         }
+
+        // Solo desbloquea correr cuando la stamina vuelve al 100%.
+        if (bSprintLockedUntilFull && CurrentStamina >= MaxStamina)
+        {
+            bSprintLockedUntilFull = false;
+        }
     }
 
     if (!bIsRunning && bRunKeyHeld)
     {
         const bool bCanTryRun =
             bSprintUnlocked &&
+            !bSprintLockedUntilFull &&
             !bIsSliding &&
             !bIsCrouching &&
             bOnGround &&
@@ -503,6 +522,7 @@ void AMyPlayerCharacter::StartRun()
     bRunKeyHeld = true;
 
     if (!bSprintUnlocked) return;
+    if (bSprintLockedUntilFull) return;
     if (bIsSliding) return;
     if (bIsCrouching) return;
     if (CurrentStamina <= 0.f) return;

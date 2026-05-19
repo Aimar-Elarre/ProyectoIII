@@ -190,6 +190,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stamina")
 	float GetStaminaPercent() const;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stamina")
+	bool bSprintLockedUntilFull = false;
+
 	// Debug
 	UFUNCTION(BlueprintCallable, Category = "Debug")
 	void Debug_UnlockSprint();

@@ -107,6 +107,13 @@ AMyPlayerCharacter::AMyPlayerCharacter()
 
     // Inventario
     InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
+
+    // Asignar el widget del inventario
+    static ConstructorHelpers::FClassFinder<UUserWidget> InventoryWidgetFinder(TEXT("/Game/WBP_Inventory"));
+    if (InventoryWidgetFinder.Succeeded())
+    {
+        InventoryWidgetClass = InventoryWidgetFinder.Class;
+    }
 }
 void AMyPlayerCharacter::BeginPlay()
 {
@@ -410,8 +417,18 @@ void AMyPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
     PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyPlayerCharacter::Dash);
     PlayerInputComponent->BindAction("Kill", IE_Pressed, this, &AMyPlayerCharacter::KillPlayer);
-    PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+    FInputActionBinding& DropActionBinding = PlayerInputComponent->BindAction("Drop", IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+    DropActionBinding.bExecuteWhenPaused = true;
+
+    FInputKeyBinding& DropRBinding = PlayerInputComponent->BindKey(EKeys::R, IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+    DropRBinding.bExecuteWhenPaused = true;
+
+    FInputKeyBinding& DropGamepadBinding = PlayerInputComponent->BindKey(EKeys::Gamepad_LeftShoulder, IE_Pressed, this, &AMyPlayerCharacter::DropItem);
+    DropGamepadBinding.bExecuteWhenPaused = true;
+
+    PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
     PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
+    PlayerInputComponent->BindKey(EKeys::Gamepad_FaceButton_Left, IE_Pressed, this, &AMyPlayerCharacter::TryInteractPickup);
     PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &AMyPlayerCharacter::ToggleFlashlight);
     PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &AMyPlayerCharacter::StartFlashlightInspect);
     PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &AMyPlayerCharacter::StopFlashlightInspect);

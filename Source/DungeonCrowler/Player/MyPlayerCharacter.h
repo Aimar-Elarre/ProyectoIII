@@ -405,10 +405,10 @@ public:
 
 	FTransform InitialMeshRelativeTransform;
 
-private:
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> InventoryWidgetClass;
 
+private:
 	UPROPERTY()
 	TObjectPtr<UUserWidget> InventoryWidgetInstance = nullptr;
 

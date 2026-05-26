@@ -615,8 +615,7 @@ void AMyPlayerCharacter::Dash()
 
     bCanDash = false;
 
-    const FRotator ControlRot = Controller ? Controller->GetControlRotation() : GetActorRotation();
-    FVector DashDir = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::X);
+    FVector DashDir = GetActorForwardVector();
     DashDir.Z = 0.f;
     DashDir.Normalize();
 

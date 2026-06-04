@@ -280,8 +280,6 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
         }
     }
 
-    RefreshLegacyCarryFromInventory();
-
     if (ItemsCarried != LastItemsCarriedForMovement)
     {
         LastItemsCarriedForMovement = ItemsCarried;
@@ -290,8 +288,18 @@ void AMyPlayerCharacter::Tick(float DeltaTime)
 
     if (PlayerHUD)
     {
-        PlayerHUD->UpdateStamina(GetStaminaPercent());
-        PlayerHUD->UpdateCarry(ItemsCarried, FMath::Max(ItemsCarried, 1));
+        const float CurrentStaminaPercent = GetStaminaPercent();
+        if (!FMath::IsNearlyEqual(CurrentStaminaPercent, LastStaminaPercent, 0.001f))
+        {
+            PlayerHUD->UpdateStamina(CurrentStaminaPercent);
+            LastStaminaPercent = CurrentStaminaPercent;
+        }
+
+        if (ItemsCarried != LastItemsCarriedForHUD)
+        {
+            PlayerHUD->UpdateCarry(ItemsCarried, FMath::Max(ItemsCarried, 1));
+            LastItemsCarriedForHUD = ItemsCarried;
+        }
     }
 
     if (!bIsDead)
@@ -744,23 +752,10 @@ void AMyPlayerCharacter::UpdateMovementSpeed()
     const float FinalJump = JumpStrength * Multiplier;
     GetCharacterMovement()->JumpZVelocity = FinalJump;
 
+#if UE_BUILD_DEVELOPMENT
     UE_LOG(LogTemp, Warning, TEXT("Items: %d | Speed: %f | Jump: %f"),
         ItemsCarried, FinalSpeed, FinalJump);
-
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(
-            12345,
-            1.5f,
-            FColor::Yellow,
-            FString::Printf(
-                TEXT("Items=%d | Speed=%.1f | Jump=%.1f"),
-                ItemsCarried,
-                FinalSpeed,
-                FinalJump
-            )
-        );
-    }
+#endif
 }
 
 void AMyPlayerCharacter::StartFlashlightInspect()

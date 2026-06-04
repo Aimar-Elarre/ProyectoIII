@@ -8,7 +8,7 @@
 
 AGameEventTrigger::AGameEventTrigger()
 {
-    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = false;
 
     TriggerBox = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerBox"));
     SetRootComponent(TriggerBox);

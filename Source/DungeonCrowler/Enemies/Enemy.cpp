@@ -18,6 +18,9 @@ void AEnemy::BeginPlay()
     InitialRotation = GetActorRotation();
 
     TargetActor = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    AIController = Cast<AAIController>(GetController());
+    bHasMoveCommand = false;
+    ActivationQueryTimer = 0.f;
 
     if (TargetActor)
     {
@@ -49,68 +52,54 @@ void AEnemy::Tick(float DeltaTime)
 
     if (!TargetActor)
     {
-        UE_LOG(LogTemp, Error, TEXT("[ENEMY] Tick: TargetActor es NULO. El enemigo no puede inicializarse."));
         return;
     }
 
     AMyPlayerCharacter* Player = Cast<AMyPlayerCharacter>(TargetActor);
     if (!Player)
     {
-        UE_LOG(LogTemp, Error, TEXT("[ENEMY] Tick: TargetActor no es AMyPlayerCharacter."));
         return;
     }
 
     if (CurrentState == EEnemyState::Inactive)
     {
-        CheckActivationCondition();
+        ActivationQueryTimer += DeltaTime;
+        if (ActivationQueryTimer >= ActivationCheckInterval)
+        {
+            ActivationQueryTimer = 0.f;
+            CheckActivationCondition();
+        }
         return;
     }
 
-    AAIController* AI = Cast<AAIController>(GetController());
-    if (!AI)
+    if (!AIController)
     {
-        UE_LOG(LogTemp, Error, TEXT("[ENEMY] ¡ERROR! Cast a AAIController FALLÓ. El enemigo NO perseguirá."));
-        return;
+        AIController = Cast<AAIController>(GetController());
+        if (!AIController)
+        {
+            return;
+        }
     }
 
     if (Player->bIsDead)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[ENEMY] El jugador está muerto. Volviendo a posición inicial."));
-        AI->StopMovement();
+        AIController->StopMovement();
         SetActorLocation(InitialLocation);
         SetActorRotation(InitialRotation);
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("[ENEMY] Tick - Estado ACTIVO. Intentando perseguir..."));
-    UE_LOG(LogTemp, Warning, TEXT("[ENEMY] Posición Enemigo: %s"), *GetActorLocation().ToString());
-    UE_LOG(LogTemp, Warning, TEXT("[ENEMY] Posición Jugador: %s"), *TargetActor->GetActorLocation().ToString());
-
-    APawn* OwnedPawn = AI->GetPawn();
-    if (OwnedPawn)
+    if (!bHasMoveCommand)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[ENEMY] AIController posee el Pawn: %s"), *OwnedPawn->GetName());
+        AIController->MoveToActor(TargetActor, 100.f);
+        bHasMoveCommand = true;
     }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("[ENEMY] ¡ERROR CRÍTICO! AIController NO posee ningún Pawn."));
-        return;
-    }
-
-    if (OwnedPawn != this)
-    {
-        UE_LOG(LogTemp, Error, TEXT("[ENEMY] ¡ERROR! El AIController posee otro Pawn, no este enemigo."));
-    }
-
-    AI->MoveToActor(TargetActor, 100.f);
 
     const float DistanceToPlayer = FVector::Dist(GetActorLocation(), TargetActor->GetActorLocation());
-    UE_LOG(LogTemp, Log, TEXT("[ENEMY] Distancia al jugador: %.2f"), DistanceToPlayer);
-
     if (DistanceToPlayer <= KillDistance)
     {
         Player->KillPlayer();
-        AI->StopMovement();
+        AIController->StopMovement();
     }
 }
 
@@ -171,13 +160,9 @@ void AEnemy::ActivateEnemy()
 {
     if (CurrentState == EEnemyState::Active)
     {
-        UE_LOG(LogTemp, Log, TEXT("[ENEMY] ActivateEnemy: ¡Ya estaba activo!"));
         return;
     }
 
     CurrentState = EEnemyState::Active;
-
-    UE_LOG(LogTemp, Warning, TEXT("//////////////////////////////////////////////////////"));
-    UE_LOG(LogTemp, Warning, TEXT("¡¡¡ ENEMIGO ACTIVADO !!! - Comenzando persecución..."));
-    UE_LOG(LogTemp, Warning, TEXT("//////////////////////////////////////////////////////"));
+    bHasMoveCommand = false;
 }

@@ -5,6 +5,7 @@
 #include "Enemy.generated.h"
 
 class UItemData;
+class AAIController;
 
 UENUM(BlueprintType)
 enum class EEnemyState : uint8
@@ -42,6 +43,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Activation")
     EEnemyState CurrentState = EEnemyState::Inactive;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Activation")
+    float ActivationCheckInterval = 0.5f;
+
     UFUNCTION(BlueprintCallable, Category = "Activation")
     void CheckActivationCondition();
 
@@ -54,4 +58,13 @@ protected:
 
     UPROPERTY()
     FRotator InitialRotation = FRotator::ZeroRotator;
+
+    UPROPERTY()
+    AAIController* AIController = nullptr;
+
+    UPROPERTY()
+    float ActivationQueryTimer = 0.f;
+
+    UPROPERTY()
+    bool bHasMoveCommand = false;
 };
